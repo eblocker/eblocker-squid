@@ -9,6 +9,7 @@
 /* DEBUG: section 04    Error Generation */
 
 #include "squid.h"
+#include "base64.h"
 #include "cache_cf.h"
 #include "clients/forward.h"
 #include "comm/Connection.h"
@@ -21,6 +22,7 @@
 #include "HttpHeaderTools.h"
 #include "HttpReply.h"
 #include "HttpRequest.h"
+#include "math.h"
 #include "MemBuf.h"
 #include "MemObject.h"
 #include "rfc1738.h"
@@ -28,6 +30,7 @@
 #include "Store.h"
 #include "tools.h"
 #include "wordlist.h"
+
 #if USE_AUTH
 #include "auth/UserRequest.h"
 #endif
@@ -765,6 +768,21 @@ ErrorState::Dump(MemBuf * mb)
 /// \ingroup ErrorPageInternal
 #define CVT_BUF_SZ 512
 
+// Encodes a (null-terminated) string in base64 and returns a newly allocated one (also null-terminated).
+static char* base64encode(const char* value) {
+    int valLength = strlen(value);
+    int maxSize = base64_encode_len(valLength) + 1;
+    char* value64 = (char*) malloc(maxSize);
+
+    struct base64_encode_ctx ctx;
+    base64_encode_init(&ctx);
+    auto encLength = base64_encode_update(&ctx, value64, valLength, reinterpret_cast<const uint8_t*>(value));
+    encLength += base64_encode_final(&ctx, value64 + encLength);
+    value64[encLength] = '\0';
+
+    return value64;
+}
+
 const char *
 ErrorState::Convert(char token, bool building_deny_info_url, bool allowRecursion)
 {
@@ -814,15 +832,22 @@ ErrorState::Convert(char token, bool building_deny_info_url, bool allowRecursion
             detail->useRequest(request);
             const String &errDetail = detail->toString();
             if (errDetail.size() > 0) {
-                MemBuf *detail_mb  = ConvertText(errDetail.termedBuf(), false);
+                char* errDetail64 = base64encode(errDetail.termedBuf());
+
+                MemBuf *detail_mb  = ConvertText(errDetail64, false);
                 mb.append(detail_mb->content(), detail_mb->contentSize());
                 delete detail_mb;
                 do_quote = 0;
+
+		free(errDetail64);
             }
         }
 #endif
-        if (!mb.contentSize())
-            mb.append("[No Error Detail]", 17);
+        if (!mb.contentSize()) {
+            char* noErrorDetail = base64encode("[No Error Detail]");
+	    mb.append(noErrorDetail, strlen(noErrorDetail));
+	    free(noErrorDetail);
+	}
         break;
 
     case 'e':

@@ -339,6 +339,7 @@ public:
         int hostStrictVerify;
         int client_dst_passthru;
         int dns_mdns;
+        int dns_aaaa;
 #if USE_OPENSSL
         bool logTlsServerHelloDetails;
 #endif

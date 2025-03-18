@@ -10,6 +10,7 @@
 
 #include "squid.h"
 #include "acl/FilledChecklist.h"
+#include "client_side.h"
 #include "comm/Loops.h"
 #include "Downloader.h"
 #include "errorpage.h"
@@ -24,6 +25,7 @@
 #include "ssl/cert_validate_message.h"
 #include "ssl/Config.h"
 #include "ssl/helper.h"
+#include "ssl/eblocker.h"
 #endif
 
 CBDATA_NAMESPACED_CLASS_INIT(Security, PeerConnector);
@@ -305,6 +307,18 @@ Security::PeerConnector::sslCrtvdHandleReply(Ssl::CertValidationResponse::Pointe
         anErr =  new ErrorState(ERR_SECURE_CONNECT_FAIL, Http::scServiceUnavailable, request.getRaw());
         anErr->detail = errDetails;
         /*anErr->xerrno= Should preserved*/
+
+        ConnStateData* conn = request->clientConnectionManager.valid();
+        SBuf clientSni;
+        if (conn != NULL) {
+            clientSni = conn->tlsClientSni();
+        }
+        debugs(83, DBG_IMPORTANT, "eblkr: "
+	        << " crtvd:" << errDetails->errorNo() << ":" << errDetails->errorName()
+                << " log_addr: " << request->client_addr
+                << " host: " << request->url.host()
+                << " sni: " << (clientSni.isEmpty() ? "<null>" : clientSni.c_str())
+                << " cert: " << eblocker::pem(errDetails->brokenCert()));
     }
 
     noteNegotiationDone(anErr);

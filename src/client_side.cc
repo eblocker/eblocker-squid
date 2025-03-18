@@ -122,6 +122,7 @@
 #if USE_OPENSSL
 #include "ssl/bio.h"
 #include "ssl/context_storage.h"
+#include "ssl/eblocker.h"
 #include "ssl/gadgets.h"
 #include "ssl/helper.h"
 #include "ssl/ProxyCerts.h"
@@ -132,6 +133,7 @@
 // for tvSubUsec() which should be in SquidTime.h
 #include "util.h"
 
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <limits>
@@ -2523,6 +2525,25 @@ httpsCreate(const Comm::ConnectionPointer &conn, const Security::ContextPointer 
     return false;
 }
 
+static std::string eblocker_pem(ConnStateData* conn) {
+    if (conn->serverBump() == NULL) {
+        return "";
+    }
+
+    X509* x509 = conn->serverBump()->serverCert.get();
+    return eblocker::pem(x509);
+}
+
+static void eblocker_log(ConnStateData* conn, const char* src, int no, const char* desc) {
+    SBuf clientSni = conn->tlsClientSni();
+    debugs(83, DBG_IMPORTANT, "eblkr: "
+           << src << ":" << no << ":" << desc
+           << " log_addr: " << conn->log_addr
+           << " host: " << (conn->pinning.host != 0 ? conn->pinning.host : "<null>")
+           << " sni: "<< (clientSni.isEmpty() ? "<null>" : clientSni.c_str())
+           << " cert: " << eblocker_pem(conn));
+}
+
 /**
  *
  * \retval 1 on success
@@ -2535,6 +2556,8 @@ tlsAttemptHandshake(ConnStateData *conn, PF *callback)
     // TODO: maybe throw instead of returning -1
     // see https://github.com/squid-cache/squid/pull/81#discussion_r153053278
     int fd = conn->clientConnection->fd;
+    int ssl_lib_error;
+    char* ssl_lib_error_str;
     auto session = fd_table[fd].ssl.get();
 
     errno = 0;
@@ -2558,22 +2581,38 @@ tlsAttemptHandshake(ConnStateData *conn, PF *callback)
         return 0;
 
     case SSL_ERROR_SYSCALL:
-        if (ret == 0) {
-            debugs(83, 2, "Error negotiating SSL connection on FD " << fd << ": Aborted by client: " << ssl_error);
+        ssl_lib_error = ERR_get_error();
+        if (ssl_lib_error == 0) {
+            if (ret == 0) {
+                debugs(83, 2, "SSL_ERROR_SYSCALL: Error negotiating SSL connection on FD " << fd << ": Aborted by client: " << ssl_error);
+                eblocker_log(conn, "ssl", ssl_error, "unexpected-eof");
+            } else {
+                debugs(83, (xerrno == ECONNRESET) ? 1 : 2, "SSL_ERROR_SYSCALL: Error negotiating SSL connection on FD " << fd << ": " <<
+                       (xerrno == 0 ? Security::ErrorString(ssl_error) : xstrerr(xerrno)));
+                eblocker_log(conn, "io", xerrno, xstrerr(xerrno));
+            }
         } else {
-            debugs(83, (xerrno == ECONNRESET) ? 1 : 2, "Error negotiating SSL connection on FD " << fd << ": " <<
-                   (xerrno == 0 ? Security::ErrorString(ssl_error) : xstrerr(xerrno)));
+            eblocker_log(conn, "ssl", ssl_error, ERR_error_string(ssl_lib_error, NULL));
         }
         break;
 
     case SSL_ERROR_ZERO_RETURN:
-        debugs(83, DBG_IMPORTANT, "Error negotiating SSL connection on FD " << fd << ": Closed by client");
+        debugs(83, DBG_IMPORTANT, "SSL_ERROR_ZERO_RETURN: Error negotiating SSL connection on FD " << fd << ": Closed by client");
+        ssl_lib_error = ERR_get_error();
+        if (ssl_lib_error == 0) {
+            eblocker_log(conn, "ssl", ssl_error, ERR_error_string(ssl_lib_error, NULL));
+        } else {
+            eblocker_log(conn, "ssl", ssl_error, "none");
+        }
         break;
 
     default:
-        debugs(83, DBG_IMPORTANT, "Error negotiating SSL connection on FD " <<
-               fd << ": " << Security::ErrorString(ssl_error) <<
+        ssl_lib_error = ERR_get_error();
+        ssl_lib_error_str = ERR_error_string(ssl_lib_error, NULL);
+        debugs(83, DBG_IMPORTANT, "default: Error negotiating SSL connection on FD " <<
+               fd << ": " << ssl_lib_error_str <<
                " (" << ssl_error << "/" << ret << ")");
+        eblocker_log(conn, "ssl", ssl_error, ssl_lib_error_str);
     }
 
 #elif USE_GNUTLS
@@ -3386,16 +3425,10 @@ ConnStateData::fakeAConnectRequest(const char *reason, const SBuf &payload)
     assert(transparent());
     const unsigned short connectPort = clientConnection->local.port();
 
-#if USE_OPENSSL
-    if (!tlsClientSni_.isEmpty())
-        connectHost.assign(tlsClientSni_);
-    else
-#endif
-    {
-        static char ip[MAX_IPSTRLEN];
-        clientConnection->local.toHostStr(ip, sizeof(ip));
-        connectHost.assign(ip);
-    }
+    static char ip[MAX_IPSTRLEN];
+    clientConnection->local.toHostStr(ip, sizeof(ip));
+    connectHost.assign(ip);
+    debugs(33, 3, "EBLKR creating fake connect " << connectHost);
 
     ClientHttpRequest *http = buildFakeRequest(Http::METHOD_CONNECT, connectHost, connectPort, payload);
 

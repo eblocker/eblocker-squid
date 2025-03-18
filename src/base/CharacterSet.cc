@@ -7,7 +7,7 @@
  */
 
 #include "squid.h"
-#include "base/CharacterSet.h"
+#include "CharacterSet.h"
 
 #include <algorithm>
 #include <iostream>
