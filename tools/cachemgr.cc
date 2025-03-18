@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2019 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -7,8 +7,8 @@
  */
 
 #include "squid.h"
-#include "base64.h"
 #include "base/CharacterSet.h"
+#include "base64.h"
 #include "getfullhostname.h"
 #include "html_quote.h"
 #include "ip/Address.h"
@@ -220,12 +220,12 @@ bool
 hostname_check(const char *uri)
 {
     static CharacterSet hostChars = CharacterSet("host",".:[]_") +
-            CharacterSet::ALPHA + CharacterSet::DIGIT;
+                                    CharacterSet::ALPHA + CharacterSet::DIGIT;
 
     const auto limit = strlen(uri);
     for (size_t i = 0; i < limit; i++) {
         if (!hostChars[uri[i]]) {
-              return false;
+            return false;
         }
     }
     return true;
@@ -624,7 +624,7 @@ read_reply(int s, cachemgr_request * req)
 
 #if _SQUID_WINDOWS_
 
-    while ((reply=recv(s, buf , sizeof(buf), 0)) > 0)
+    while ((reply=recv(s, buf, sizeof(buf), 0)) > 0)
         fwrite(buf, 1, reply, fp);
 
     rewind(fp);
@@ -1092,13 +1092,19 @@ make_pub_auth(cachemgr_request * req)
     if (!req->passwd || !strlen(req->passwd))
         return;
 
+    auto *rfc1738_username = xstrdup(rfc1738_escape(safe_str(req->user_name)));
+    auto *rfc1738_passwd = xstrdup(rfc1738_escape(req->passwd));
+
     /* host | time | user | passwd */
     const int bufLen = snprintf(buf, sizeof(buf), "%s|%d|%s|%s",
                                 req->hostname,
                                 (int) now,
-                                rfc1738_escape(safe_str(req->user_name)),
-                                rfc1738_escape(req->passwd));
+                                rfc1738_username,
+                                rfc1738_passwd);
     debug("cmgr: pre-encoded for pub: %s\n", buf);
+
+    safe_free(rfc1738_username);
+    safe_free(rfc1738_passwd);
 
     const int encodedLen = base64_encode_len(bufLen);
     req->pub_auth = (char *) xmalloc(encodedLen);
