@@ -2129,8 +2129,10 @@ ClientHttpRequest::noteMoreBodyDataAvailable(BodyPipe::Pointer)
         bpc.checkIn();
     }
 
-    if (adaptedBodySource->exhausted())
+    if (adaptedBodySource->exhausted()) {
+        receivedWholeAdaptedReply = true;
         endRequestSatisfaction();
+    }
     // else wait for more body data
 }
 
