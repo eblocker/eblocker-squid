@@ -1,3 +1,9 @@
+squid (5.7-2+deb12u2+eblocker1) unstable; urgency=medium
+
+  * [#1] Add workaround for truncated body via ICAP REQMOD issue
+
+ -- eBlocker Open Source <dev@eblocker.org>  Thu, 15 May 2025 10:27:00 +0200
+
 squid (5.7-2+deb12u2) bookworm-security; urgency=medium
 
   * CVE-2024-37894 (Closes: #1074284)
