@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -11,6 +11,7 @@
 
 #include "base/HardFun.h"
 #include "comm/forward.h"
+#include "security/Context.h"
 #include "security/LockingPointer.h"
 
 #include <memory>
@@ -22,7 +23,7 @@
 #endif
 #endif
 
-#if USE_GNUTLS
+#if HAVE_LIBGNUTLS
 #if HAVE_GNUTLS_GNUTLS_H
 #include <gnutls/gnutls.h>
 #endif
@@ -30,9 +31,13 @@
 
 namespace Security {
 
+// XXX: Should be only in src/security/forward.h (which should not include us
+// because that #include creates a circular reference and problems like this).
+class FuturePeerContext;
+
 /// Creates TLS Client connection structure (aka 'session' state) and initializes TLS/SSL I/O (Comm and BIO).
 /// On errors, emits DBG_IMPORTANT with details and returns false.
-bool CreateClientSession(const Security::ContextPointer &, const Comm::ConnectionPointer &, const char *squidCtx);
+bool CreateClientSession(FuturePeerContext &, const Comm::ConnectionPointer &, const char *squidCtx);
 
 class PeerOptions;
 
@@ -43,11 +48,19 @@ bool CreateServerSession(const Security::ContextPointer &, const Comm::Connectio
 #if USE_OPENSSL
 typedef SSL Connection;
 
+using Session = SSL_SESSION;
+
 typedef std::shared_ptr<SSL> SessionPointer;
 
 typedef std::unique_ptr<SSL_SESSION, HardFun<void, SSL_SESSION*, &SSL_SESSION_free>> SessionStatePointer;
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
+// to be finalized when it is actually needed/used
+struct Connection {};
+
+// to be finalized when it is actually needed/used
+struct Session {};
+
 typedef std::shared_ptr<struct gnutls_session_int> SessionPointer;
 
 // wrapper function to get around gnutls_free being a typedef
@@ -56,6 +69,8 @@ typedef std::unique_ptr<gnutls_datum_t, HardFun<void, void*, &Security::squid_gn
 
 #else
 typedef std::nullptr_t Connection;
+
+struct Session {};
 
 typedef std::shared_ptr<void> SessionPointer;
 

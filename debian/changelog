@@ -1,28 +1,194 @@
-squid (5.7-2+deb12u2) bookworm-security; urgency=medium
+squid (7.1-1) unstable; urgency=high
 
-  * CVE-2024-37894 (Closes: #1074284)
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 7.1 (Closes: #1097927, #1015670)
 
- -- Moritz Mühlenhoff <jmm@debian.org>  Fri, 16 Aug 2024 17:02:55 +0200
+  * Drop binaries removed upstream
+    - ntlm_smb_lm_auth (Fixes: CVE-2025-21311)
+    - squid-purge
+    - squid-cgi
+    - squidclient
 
-squid (5.7-2+deb12u1) bookworm-security; urgency=high
+  * Remove workaround for CVE-2024-45802, integrated upstream.
 
-  * Non-maintainer upload.
-  * Fix CVE-2023-46724, CVE-2023-46846, CVE-2023-46847, CVE-2023-46848,
-    CVE-2023-49285, CVE-2023-49286, CVE-2023-50269, CVE-2024-23638,
-    CVE-2024-25111, CVE-2024-25617.
-  * Several security vulnerabilities have been discovered in Squid, a full
-    featured web proxy cache. Due to programming errors in Squid's HTTP request
-    parsing, remote attackers may be able to execute a denial of service attack
-    by sending large X-Forwarded-For header or trigger a stack buffer overflow
-    while performing HTTP Digest authentication. Other issues facilitate
-    request smuggling past a firewall or a denial of service against Squid's
-    Helper process management.
-    In regard to CVE-2023-46728: Please note that support for the Gopher
-    protocol has simply been removed in future Squid versions. There are no
-    plans by the upstream developers of Squid to fix this issue. We recommend
-    to reject all Gopher URL requests instead.
+  * debian/patches/
+    - refresh patches for new version
 
- -- Markus Koschany <apo@debian.org>  Tue, 05 Mar 2024 23:14:44 +0100
+ -- Luigi Gangitano <luigi@debian.org>  Mon, 14 Jul 2025 10:58:20 +0200
+
+squid (6.13-2) unstable; urgency=low
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * debian/control
+    - Bumped Standards-Version to 4.7.2, no change needed
+    - Add Build-Dep on libcrypt-dev (Closes: #1106998)
+
+  * debian/squid-openssl.links
+    - Add symlink for man8 file
+
+  * debian/squid.postrm
+    - Remove no longer necessary workaround for Bug #984897
+
+ -- Luigi Gangitano <luigi@debian.org>  Mon,  9 Jun 2025 10:35:20 +0200
+
+squid (6.13-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.13 (Closes: #956581)
+
+  * debian/watch
+    - update for new upstream release location
+
+  * debian/squid{,-openssl}.alternatives
+    - switch alternatives priority (Closes: #1086537)
+
+  * debian/squid.tmpfile
+    - fix warning: The name debian/squid.tmpfile is deprecated
+      please use debian/squid.tmpfiles instead
+
+  * debian/NEWS
+    - fix lintian warning syntax-error-in-debian-news-file
+
+ -- Luigi Gangitano <luigi@debian.org>  Tue, 11 Feb 2025 12:35:20 +0100
+
+squid (6.12-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.12 (Closes: #1063877)
+
+  * Disable ESI feature support
+    Fixes: CVE-2024-45802. SQUID-2024:4
+
+  * debian/{control,rules}
+    - Migrate from lsb-release to os-release.
+    - Remove deprecated lsb-base dependency. It has been
+      replaced by sysvinit-utils in essential packages.
+    - Polish user visible package descriptions.
+    - Restructure rules special-cases for easier team maintenance.
+
+  * Use alternatives system for squid binary
+
+  [ Luigi Gangitano <luigi@debian.org> ]
+  * debian/control
+    - Add Rules-Requires-Root: binary-targets
+    - Bumped Standards-Version to 4.7.0, no change needed
+
+  * debian/patches/*
+    - Refreshed patches
+    - Added description to 0006-upstream-807ae4df2164defbb5f59b99282e24010b4a0b85.patch
+
+  * debian/upstream/signing-key.asc
+    - Added Francesco Chemolli's key to the authorized keys (Closes: #1084734)
+
+  [ Sven Auhagen <sven.auhagen@voleatech.de> ]
+  * debian/squid.postinst
+    - Check if cache folder exists before using chown
+
+ -- Luigi Gangitano <luigi@debian.org>  Mon, 28 Oct 2024 11:04:20 +0100
+
+squid (6.10-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.10
+    Fixes: CVE-2024-37894. SQUID-2024:3 (Closes: #1074284)
+
+ -- Luigi Gangitano <luigi@debian.org>  Mon,  1 Jul 2024 12:04:20 +0200
+
+squid (6.9-1) unstable; urgency=medium
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.9
+
+ -- Luigi Gangitano <luigi@debian.org>  Tue,  9 Apr 2024 15:04:20 +0200
+
+squid (6.8-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.8
+    Fixes: CVE-2024-25111. SQUID-2024:1
+
+  [ Luigi Gangitano <luigi@debian.org> ]
+  * debian/control
+    - Migrate from pkg-config to pkgconf
+
+ -- Luigi Gangitano <luigi@debian.org>  Mon,  4 Mar 2024 18:04:20 +0100
+
+squid (6.6-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.6
+    Fixes: CVE-2023-50269. SQUID-2023:10 (Closes: #1058721)
+    Fixes: CVE-2024-23638. SQUID-2023:11
+
+  [ Luigi Gangitano <luigi@debian.org> ]
+  * debian/patches/
+    - Refreshed patches
+
+  * debian/squid-openssl.dirs
+    - Stop creating empty /lib/systemd/system directory (Closes: #1058860)
+
+  * debian/changelog
+    - Fixed typo in CVE reference
+
+ -- Luigi Gangitano <luigi@debian.org>  Thu, 18 Jan 2024 13:04:20 +0100
+
+squid (6.5-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 6.5
+    Fixes: CVE-2023-46846. SQUID-2023:1 (Closes: #1054537)
+    Fixes: CVE-2023-5824. SQUID-2023:2 (Closes: #1055249)
+    Fixes: CVE-2023-46847. SQUID-2023:3 (Closes: #1055250)
+    Fixes: CVE-2023-46724. SQUID-2023:4 (Closes: #1055252)
+    Fixes: CVE-2023-46848. SQUID-2023:5 (Closes: #1055251)
+    Fixes: CVE-2019-18860. SQUID-2023:6
+    Fixes: CVE-2023-49285. SQUID-2023:7
+    Fixes: CVE-2023-49286. SQUID-2023:8
+    Fixes: CVE-2024-25617. SQUID-2024:2
+
+  * Update debian/tests/upstream-test-suite for new version (Closes: #1053557)
+
+ -- Luigi Gangitano <luigi@debian.org>  Thu,  9 Nov 2023 15:04:20 +0100
+
+squid (6.3-1) unstable; urgency=medium
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream version 6.3 (Closes: #1049926, #1043505)
+
+  * debian/patches/
+    - remove 0007-ftbfs-gnu-hurd.patch integrated upstream
+
+ -- Luigi Gangitano <luigi@debian.org>  Thu, 28 Sep 2023 16:04:20 +0200
+
+squid (6.1-2) unstable; urgency=low
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * debian/patches/
+   - add 0007-ftbfs-gnu-hurd.patch to fix GNU/Hurd build
+
+ -- Luigi Gangitano <luigi@debian.org>  Thu, 13 Jul 2023 13:04:20 +0200
+
+squid (6.1-1) unstable; urgency=medium
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * debian/{control,watch}
+    - New Upstream Release
+
+  * debian/patches/
+    - refresh for new upstream version
+    - add 0006-upstream-807ae4df2164defbb5f59b99282e24010b4a0b85.patch
+    - remove 0003-installed-binary-for-debian-ci.patch integrated upstream
+    - remove 1f13f721263a4cc75e4b798a230022561047899c.patch integrated upstream
+    - remove edad3f150de8af0aeb2f629508be3219b83369b9.patch integrated upstream
+
+  [ Luigi Gangitano <luigi@debian.org> ]
+  * debian/patches/
+    - add Fordwarded tag
+
+  * debian/control
+    - Bumped Standards-Version to 4.6.2, no change needed
+
+ -- Luigi Gangitano <luigi@debian.org>  Mon, 10 Jul 2023 11:04:20 +0200
 
 squid (5.7-2) unstable; urgency=medium
 
@@ -40,6 +206,7 @@ squid (5.7-1) unstable; urgency=medium
 
   * Exposure of Sensitive Information in Cache Manager (CVE-2022-41317)
     (Closes: #1020587)
+
   * Buffer Over Read in SSPI and SMB Authentication (CVE-2022-41318)
     (Closes: #1020586)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -8,12 +8,12 @@
 
 #include "squid.h"
 #include "anyp/PortCfg.h"
+#include "base/IoManip.h"
 #include "base/Packable.h"
 #include "cache_cf.h"
 #include "error/SysErrorDetail.h"
 #include "fatal.h"
 #include "globals.h"
-#include "security/Io.h"
 #include "security/ServerOptions.h"
 #include "security/Session.h"
 #include "SquidConfig.h"
@@ -91,7 +91,7 @@ Security::ServerOptions::parse(const char *token)
 
     } else if (strncmp(token, "dhparams=", 9) == 0) {
         if (!eecdhCurve.isEmpty()) {
-            debugs(83, DBG_PARSE_NOTE(1), "UPGRADE WARNING: EECDH settings in tls-dh= override dhparams=");
+            debugs(83, DBG_PARSE_NOTE(1), "WARNING: UPGRADE: EECDH settings in tls-dh= override dhparams=");
             return;
         }
 
@@ -137,26 +137,26 @@ Security::ServerOptions::parse(const char *token)
 }
 
 void
-Security::ServerOptions::dumpCfg(Packable *p, const char *pfx) const
+Security::ServerOptions::dumpCfg(std::ostream &os, const char *pfx) const
 {
     // dump out the generic TLS options
-    Security::PeerOptions::dumpCfg(p, pfx);
+    Security::PeerOptions::dumpCfg(os, pfx);
 
     if (!encryptTransport)
         return; // no other settings are relevant
 
     // dump the server-only options
     if (!dh.isEmpty())
-        p->appendf(" %sdh=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(dh));
+        os << ' ' << pfx << "dh=" << dh;
 
     if (!generateHostCertificates)
-        p->appendf(" %sgenerate-host-certificates=off", pfx);
+        os << ' ' << pfx << "generate-host-certificates=off";
 
     if (dynamicCertMemCacheSize != 4*1024*1024) // 4MB default, no 'tls-' prefix
-        p->appendf(" dynamic_cert_mem_cache_size=%" PRIuSIZE "bytes", dynamicCertMemCacheSize);
+        os << ' ' << "dynamic_cert_mem_cache_size=" << dynamicCertMemCacheSize << "bytes";
 
     if (!staticContextSessionId.isEmpty())
-        p->appendf(" %scontext=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(staticContextSessionId));
+        os << ' ' << pfx << "context=" << staticContextSessionId;
 }
 
 Security::ContextPointer
@@ -173,7 +173,7 @@ Security::ServerOptions::createBlankContext() const
     }
     ctx = convertContextFromRawPtr(t);
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     // Initialize for X.509 certificate exchange
     gnutls_certificate_credentials_t t;
     if (const auto x = gnutls_certificate_allocate_credentials(&t)) {
@@ -211,7 +211,7 @@ Security::ServerOptions::initServerContexts(AnyP::PortCfg &port)
 }
 
 bool
-Security::ServerOptions::createStaticServerContext(AnyP::PortCfg &port)
+Security::ServerOptions::createStaticServerContext(AnyP::PortCfg &)
 {
     updateTlsVersionLimits();
 
@@ -222,7 +222,7 @@ Security::ServerOptions::createStaticServerContext(AnyP::PortCfg &port)
         if (certs.size() > 1) {
             // NOTE: calling SSL_CTX_use_certificate() repeatedly _replaces_ the previous cert details.
             //       so we cannot use it and support multiple server certificates with OpenSSL.
-            debugs(83, DBG_CRITICAL, "ERROR: OpenSSL does not support multiple server certificates. Ignoring addional cert= parameters.");
+            debugs(83, DBG_CRITICAL, "ERROR: OpenSSL does not support multiple server certificates. Ignoring additional cert= parameters.");
         }
 
         const auto &keys = certs.front();
@@ -249,7 +249,7 @@ Security::ServerOptions::createStaticServerContext(AnyP::PortCfg &port)
             }
         }
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
         for (auto &keys : certs) {
             gnutls_x509_crt_t crt = keys.cert.get();
             gnutls_x509_privkey_t xkey = keys.pkey.get();
@@ -302,7 +302,7 @@ Security::ServerOptions::createSigningContexts(const AnyP::PortCfg &port)
 
 #if USE_OPENSSL
     Ssl::generateUntrustedCert(untrustedSigningCa.cert, untrustedSigningCa.pkey, signingCa.cert, signingCa.pkey);
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     // TODO: implement for GnuTLS. Just a warning for now since generate is implicitly on for all crypto builds.
     signingCa.cert.reset();
     signingCa.pkey.reset();
@@ -351,6 +351,12 @@ Security::ServerOptions::loadClientCaFile()
     return bool(clientCaStack);
 }
 
+/// Interprets DHE parameters stored in a previously configured dhParamsFile.
+/// These DHE parameters are orthogonal to ECDHE curve name that may also be
+/// configured when naming that DHE parameters configuration file. When both are
+/// configured, the server selects either FFDHE or ECDHE key exchange mechanism
+/// (and its cipher suites) depending on client-supported cipher suites.
+/// \sa Security::ServerOptions::updateContextEecdh() and RFC 7919 Section 1.2
 void
 Security::ServerOptions::loadDhParams()
 {
@@ -365,11 +371,11 @@ Security::ServerOptions::loadDhParams()
 #if OPENSSL_VERSION_MAJOR < 3
     DH *dhp = nullptr;
     if (FILE *in = fopen(dhParamsFile.c_str(), "r")) {
-        dhp = PEM_read_DHparams(in, NULL, NULL, NULL);
+        dhp = PEM_read_DHparams(in, nullptr, nullptr, nullptr);
         fclose(in);
     } else {
         const auto xerrno = errno;
-        debugs(83, DBG_IMPORTANT, "WARNING: Failed to open '" << dhParamsFile << "'" << xstrerr(xerrno));
+        debugs(83, DBG_IMPORTANT, "WARNING: Failed to open '" << dhParamsFile << "'" << ReportSysError(xerrno));
         return;
     }
 
@@ -381,7 +387,7 @@ Security::ServerOptions::loadDhParams()
     int codes;
     if (DH_check(dhp, &codes) == 0) {
         if (codes) {
-            debugs(83, DBG_IMPORTANT, "WARNING: Failed to verify DH parameters '" << dhParamsFile << "' (" << std::hex << codes << ")");
+            debugs(83, DBG_IMPORTANT, "WARNING: Failed to verify DH parameters '" << dhParamsFile << "' (" << asHex(codes) << ")");
             DH_free(dhp);
             dhp = nullptr;
         }
@@ -390,9 +396,9 @@ Security::ServerOptions::loadDhParams()
     parsedDhParams.resetWithoutLocking(dhp);
 
 #else // OpenSSL 3.0+
-    const auto type = eecdhCurve.isEmpty() ? "DH" : "EC";
+    const auto type = "DH";
 
-    Security::ForgetErrors();
+    Ssl::ForgetErrors();
     EVP_PKEY *rawPkey = nullptr;
     using DecoderContext = std::unique_ptr<OSSL_DECODER_CTX, HardFun<void, OSSL_DECODER_CTX*, &OSSL_DECODER_CTX_free> >;
     if (const DecoderContext dctx{OSSL_DECODER_CTX_new_for_pkey(&rawPkey, "PEM", nullptr, type, 0, nullptr, nullptr)}) {
@@ -405,8 +411,7 @@ Security::ServerOptions::loadDhParams()
         assert(!rawPkey);
 
         if (OSSL_DECODER_CTX_get_num_decoders(dctx.get()) == 0) {
-            auto ssl_error = ERR_get_error();
-            debugs(83, DBG_IMPORTANT, "WARNING: No suitable decoders found for " << type << " parameters. " << Security::ErrorString(ssl_error));
+            debugs(83, DBG_IMPORTANT, "WARNING: No suitable decoders found for " << type << " parameters" << Ssl::ReportAndForgetErrors);
             return;
         }
 
@@ -414,43 +419,34 @@ Security::ServerOptions::loadDhParams()
             if (OSSL_DECODER_from_fp(dctx.get(), in)) {
                 assert(rawPkey);
                 const Security::DhePointer pkey(rawPkey);
-                // TODO: verify that the loaded parameters match the curve named in eecdhCurve
-
                 if (const Ssl::EVP_PKEY_CTX_Pointer pkeyCtx{EVP_PKEY_CTX_new_from_pkey(nullptr, pkey.get(), nullptr)}) {
                     switch (EVP_PKEY_param_check(pkeyCtx.get())) {
                     case 1: // success
                         parsedDhParams = pkey;
                         break;
-                    case -2: {
-                        auto ssl_error = ERR_get_error();
-                        debugs(83, DBG_PARSE_NOTE(2), "WARNING: OpenSSL does not support " << type << " parameters check: " << dhParamsFile << ". " << Security::ErrorString(ssl_error));
-                    }
-                    break;
-                    default: {
-                        auto ssl_error = ERR_get_error();
-                        debugs(83, DBG_IMPORTANT, "ERROR: Failed to verify " << type << " parameters in " << dhParamsFile << ". " << Security::ErrorString(ssl_error));
-                    }
-                    break;
+                    case -2:
+                        debugs(83, DBG_PARSE_NOTE(2), "WARNING: OpenSSL does not support " << type << " parameters check: " << dhParamsFile << Ssl::ReportAndForgetErrors);
+                        break;
+                    default:
+                        debugs(83, DBG_IMPORTANT, "ERROR: Failed to verify " << type << " parameters in " << dhParamsFile << Ssl::ReportAndForgetErrors);
+                        break;
                     }
                 } else {
                     // TODO: Reduce error reporting code duplication.
-                    auto ssl_error = ERR_get_error();
-                    debugs(83, DBG_IMPORTANT, "ERROR: Cannot check " << type << " parameters in " << dhParamsFile << ". " << Security::ErrorString(ssl_error));
+                    debugs(83, DBG_IMPORTANT, "ERROR: Cannot check " << type << " parameters in " << dhParamsFile << Ssl::ReportAndForgetErrors);
                 }
             } else {
-                auto ssl_error = ERR_get_error();
-                debugs(83, DBG_IMPORTANT, "WARNING: Failed to decode " << type << " parameters '" << dhParamsFile << "'. " << Security::ErrorString(ssl_error));
+                debugs(83, DBG_IMPORTANT, "WARNING: Failed to decode " << type << " parameters '" << dhParamsFile << "'" << Ssl::ReportAndForgetErrors);
                 EVP_PKEY_free(rawPkey); // probably still nil, but just in case
             }
             fclose(in);
         } else {
             const auto xerrno = errno;
-            debugs(83, DBG_IMPORTANT, "WARNING: Failed to open '" << dhParamsFile << "'" << xstrerr(xerrno));
+            debugs(83, DBG_IMPORTANT, "WARNING: Failed to open '" << dhParamsFile << "'" << ReportSysError(xerrno));
         }
 
     } else {
-        auto ssl_error = ERR_get_error();
-        debugs(83, DBG_IMPORTANT, "WARNING: Unable to create decode context for " << type << " parameters. " << Security::ErrorString(ssl_error));
+        debugs(83, DBG_IMPORTANT, "WARNING: Unable to create decode context for " << type << " parameters" << Ssl::ReportAndForgetErrors);
         return;
     }
 #endif
@@ -521,6 +517,8 @@ Security::ServerOptions::updateContextClientCa(Security::ContextPointer &ctx)
     } else {
         Ssl::DisablePeerVerification(ctx);
     }
+#else
+    (void)ctx;
 #endif
 }
 
@@ -533,7 +531,7 @@ Security::ServerOptions::updateContextEecdh(Security::ContextPointer &ctx)
 
 #if USE_OPENSSL && OPENSSL_VERSION_NUMBER >= 0x0090800fL && !defined(OPENSSL_NO_ECDH)
 
-        Security::ForgetErrors();
+        Ssl::ForgetErrors();
 
         int nid = OBJ_sn2nid(eecdhCurve.c_str());
         if (!nid) {
@@ -558,23 +556,37 @@ Security::ServerOptions::updateContextEecdh(Security::ContextPointer &ctx)
 #else
         // TODO: Support multiple group names via SSL_CTX_set1_groups_list().
         if (!SSL_CTX_set1_groups(ctx.get(), &nid, 1)) {
-            auto ssl_error = ERR_get_error();
-            debugs(83, DBG_CRITICAL, "ERROR: Unable to set Ephemeral ECDH: " << Security::ErrorString(ssl_error));
+            debugs(83, DBG_CRITICAL, "ERROR: Unable to set Ephemeral ECDH: " << Ssl::ReportAndForgetErrors);
             return;
         }
 #endif
 #else
         debugs(83, DBG_CRITICAL, "ERROR: EECDH is not available in this build." <<
                " Please link against OpenSSL>=0.9.8 and ensure OPENSSL_NO_ECDH is not set.");
+        (void)ctx;
 #endif
     }
 
     // set DH parameters into the server context
 #if USE_OPENSSL
     if (parsedDhParams) {
-        SSL_CTX_set_tmp_dh(ctx.get(), parsedDhParams.get());
+#if OPENSSL_VERSION_MAJOR < 3
+        if (SSL_CTX_set_tmp_dh(ctx.get(), parsedDhParams.get()) != 1) {
+            debugs(83, DBG_IMPORTANT, "ERROR: Unable to set DH parameters in TLS context (using legacy OpenSSL): " << Ssl::ReportAndForgetErrors);
+        }
+#else
+        const auto tmp = EVP_PKEY_dup(parsedDhParams.get());
+        if (!tmp) {
+            debugs(83, DBG_IMPORTANT, "ERROR: Unable to duplicate DH parameters: " << Ssl::ReportAndForgetErrors);
+            return;
+        }
+        if (SSL_CTX_set0_tmp_dh_pkey(ctx.get(), tmp) != 1) {
+            debugs(83, DBG_IMPORTANT, "ERROR: Unable to set DH parameters in TLS context: " << Ssl::ReportAndForgetErrors);
+            EVP_PKEY_free(tmp);
+        }
+#endif // OPENSSL_VERSION_MAJOR
     }
-#endif
+#endif // USE_OPENSSL
 }
 
 void
@@ -583,6 +595,8 @@ Security::ServerOptions::updateContextSessionId(Security::ContextPointer &ctx)
 #if USE_OPENSSL
     if (!staticContextSessionId.isEmpty())
         SSL_CTX_set_session_id_context(ctx.get(), reinterpret_cast<const unsigned char*>(staticContextSessionId.rawContent()), staticContextSessionId.length());
+#else
+    (void)ctx;
 #endif
 }
 

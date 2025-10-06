@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -8,7 +8,7 @@
 
 #include "squid.h"
 #include "base/Packable.h"
-#include "Debug.h"
+#include "debug/Stream.h"
 #include "fatal.h"
 #include "globals.h"
 #include "parser/Tokenizer.h"
@@ -55,7 +55,7 @@ Security::PeerOptions::parse(const char *token)
         KeyData &t = certs.back();
         t.privateKeyFile = SBuf(token + 4);
     } else if (strncmp(token, "version=", 8) == 0) {
-        debugs(0, DBG_PARSE_NOTE(1), "UPGRADE WARNING: SSL version= is deprecated. Use options= and tls-min-version= to limit protocols instead.");
+        debugs(0, DBG_PARSE_NOTE(1), "WARNING: UPGRADE: SSL version= is deprecated. Use options= and tls-min-version= to limit protocols instead.");
         sslVersion = xatoi(token + 8);
     } else if (strncmp(token, "min-version=", 12) == 0) {
         tlsMinVersion = SBuf(token + 12);
@@ -102,51 +102,51 @@ Security::PeerOptions::parse(const char *token)
 }
 
 void
-Security::PeerOptions::dumpCfg(Packable *p, const char *pfx) const
+Security::PeerOptions::dumpCfg(std::ostream &os, const char *pfx) const
 {
     if (!encryptTransport) {
-        p->appendf(" %sdisable", pfx);
+        os << ' ' << pfx << "disable";
         return; // no other settings are relevant
     }
 
     for (auto &i : certs) {
         if (!i.certFile.isEmpty())
-            p->appendf(" %scert=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(i.certFile));
+            os << ' ' << pfx << "cert=" << i.certFile;
 
         if (!i.privateKeyFile.isEmpty() && i.privateKeyFile != i.certFile)
-            p->appendf(" %skey=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(i.privateKeyFile));
+            os << ' ' << pfx << "key=" << i.privateKeyFile;
     }
 
     if (!sslOptions.isEmpty())
-        p->appendf(" %soptions=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(sslOptions));
+        os << ' ' << pfx << "options=" << sslOptions;
 
     if (!sslCipher.isEmpty())
-        p->appendf(" %scipher=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(sslCipher));
+        os << ' ' << pfx << "cipher=" << sslCipher;
 
     for (auto i : caFiles) {
-        p->appendf(" %scafile=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(i));
+        os << ' ' << pfx << "cafile=" << i;
     }
 
     if (!caDir.isEmpty())
-        p->appendf(" %scapath=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(caDir));
+        os << ' ' << pfx << "capath=" << caDir;
 
     if (!crlFile.isEmpty())
-        p->appendf(" %scrlfile=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(crlFile));
+        os << ' ' << pfx << "crlfile=" << crlFile;
 
     if (!sslFlags.isEmpty())
-        p->appendf(" %sflags=" SQUIDSBUFPH, pfx, SQUIDSBUFPRINT(sslFlags));
+        os << ' ' << pfx << "flags=" << sslFlags;
 
     if (flags.tlsDefaultCa.configured()) {
         // default ON for peers / upstream servers
         // default OFF for listening ports
         if (flags.tlsDefaultCa)
-            p->appendf(" %sdefault-ca", pfx);
+            os << ' ' << pfx << "default-ca";
         else
-            p->appendf(" %sdefault-ca=off", pfx);
+            os << ' ' << pfx << "default-ca=off";
     }
 
     if (!flags.tlsNpn)
-        p->appendf(" %sno-npn", pfx);
+        os << ' ' << pfx << "no-npn";
 }
 
 void
@@ -167,7 +167,7 @@ Security::PeerOptions::updateTlsVersionLimits()
                 add.append(":NO_TLSv1_1");
             if (v > 2)
                 add.append(":NO_TLSv1_2");
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
             if (v > 0)
                 add.append(":-VERS-TLS1.0");
             if (v > 1)
@@ -198,28 +198,28 @@ Security::PeerOptions::updateTlsVersionLimits()
         case 3:
 #if USE_OPENSSL
             add = ":NO_TLSv1:NO_TLSv1_1:NO_TLSv1_2:NO_TLSv1_3";
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
             add = ":-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2:-VERS-TLS1.3";
 #endif
             break;
         case 4:
 #if USE_OPENSSL
             add = ":NO_SSLv3:NO_TLSv1_1:NO_TLSv1_2:NO_TLSv1_3";
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
             add = ":+VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2:-VERS-TLS1.3";
 #endif
             break;
         case 5:
 #if USE_OPENSSL
             add = ":NO_SSLv3:NO_TLSv1:NO_TLSv1_2:NO_TLSv1_3";
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
             add = ":-VERS-TLS1.0:+VERS-TLS1.1:-VERS-TLS1.2:-VERS-TLS1.3";
 #endif
             break;
         case 6:
 #if USE_OPENSSL
             add = ":NO_SSLv3:NO_TLSv1:NO_TLSv1_1:NO_TLSv1_3";
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
             add = ":-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.3";
 #endif
             break;
@@ -251,7 +251,7 @@ Security::PeerOptions::createBlankContext() const
     }
     ctx = convertContextFromRawPtr(t);
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     // Initialize for X.509 certificate exchange
     gnutls_certificate_credentials_t t;
     if (const auto x = gnutls_certificate_allocate_credentials(&t)) {
@@ -429,7 +429,7 @@ static struct ssl_option {
         "", 0
     },
     {
-        NULL, 0
+        nullptr, 0
     }
 };
 #endif /* USE_OPENSSL */
@@ -522,7 +522,7 @@ Security::PeerOptions::parseOptions()
 #endif
     parsedOptions = op;
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     if (str.isEmpty()) {
         parsedOptions.reset();
         return;
@@ -623,7 +623,7 @@ Security::PeerOptions::loadCrlFile()
         return;
     }
 
-    while (X509_CRL *crl = PEM_read_bio_X509_CRL(in,NULL,NULL,NULL)) {
+    while (X509_CRL *crl = PEM_read_bio_X509_CRL(in,nullptr,nullptr,nullptr)) {
         parsedCrl.emplace_back(Security::CrlPointer(crl));
     }
     BIO_free(in);
@@ -636,15 +636,18 @@ Security::PeerOptions::updateContextOptions(Security::ContextPointer &ctx)
     parseOptions();
 #if USE_OPENSSL
     SSL_CTX_set_options(ctx.get(), parsedOptions);
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     // NP: GnuTLS uses 'priorities' which are set only per-session instead.
+    (void)ctx;
+#else
+    (void)ctx;
 #endif
 }
 
 #if USE_OPENSSL && defined(TLSEXT_TYPE_next_proto_neg)
 // Dummy next_proto_neg callback
 static int
-ssl_next_proto_cb(SSL *s, unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg)
+ssl_next_proto_cb(SSL *, unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void * /* arg */)
 {
     static const unsigned char supported_protos[] = {8, 'h','t','t', 'p', '/', '1', '.', '1'};
     (void)SSL_select_next_proto(out, outlen, in, inlen, supported_protos, sizeof(supported_protos));
@@ -660,10 +663,11 @@ Security::PeerOptions::updateContextNpn(Security::ContextPointer &ctx)
 
 #if USE_OPENSSL && defined(TLSEXT_TYPE_next_proto_neg)
     SSL_CTX_set_next_proto_select_cb(ctx.get(), &ssl_next_proto_cb, nullptr);
-#endif
-
+#else
     // NOTE: GnuTLS does not support the obsolete NPN extension.
     //       it does support ALPN per-session, not per-context.
+    (void)ctx;
+#endif
 }
 
 static const char *
@@ -674,7 +678,7 @@ loadSystemTrustedCa(Security::ContextPointer &ctx)
     if (SSL_CTX_set_default_verify_paths(ctx.get()) == 0)
         return Security::ErrorString(ERR_get_error());
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     auto x = gnutls_certificate_set_x509_system_trust(ctx.get());
     if (x < 0)
         return Security::ErrorString(x);
@@ -702,7 +706,7 @@ Security::PeerOptions::updateContextCa(Security::ContextPointer &ctx)
             debugs(83, DBG_IMPORTANT, "WARNING: Ignoring error setting CA certificate location " <<
                    i << ": " << Security::ErrorString(x));
         }
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
         const auto x = gnutls_certificate_set_x509_trust_file(ctx.get(), i.c_str(), GNUTLS_X509_FMT_PEM);
         if (x < 0) {
             debugs(83, DBG_IMPORTANT, "WARNING: Ignoring error setting CA certificate location " <<
@@ -741,6 +745,8 @@ Security::PeerOptions::updateContextCrl(Security::ContextPointer &ctx)
         X509_STORE_set_flags(st, X509_V_FLAG_CRL_CHECK);
 #endif
 
+#else /* USE_OPENSSL */
+    (void)ctx;
 #endif /* USE_OPENSSL */
 }
 
@@ -756,8 +762,11 @@ Security::PeerOptions::updateContextTrust(Security::ContextPointer &ctx)
                Security::ErrorString(ERR_get_error()));
     }
 #endif
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     // Modern GnuTLS versions trust intermediate CA certificates by default.
+    (void)ctx;
+#else
+    (void)ctx;
 #endif /* TLS library */
 }
 
@@ -770,7 +779,7 @@ Security::PeerOptions::updateSessionOptions(Security::SessionPointer &s)
     // XXX: Options already set before (via the context) are not cleared!
     SSL_set_options(s.get(), parsedOptions);
 
-#elif USE_GNUTLS
+#elif HAVE_LIBGNUTLS
     LibErrorCode x;
     SBuf errMsg;
     if (!parsedOptions) {
@@ -787,6 +796,8 @@ Security::PeerOptions::updateSessionOptions(Security::SessionPointer &s)
     if (x != GNUTLS_E_SUCCESS) {
         debugs(83, DBG_IMPORTANT, "ERROR: session=" << s << " Failed to set TLS options (" << errMsg << ":" << tlsMinVersion << "). error: " << Security::ErrorString(x));
     }
+#else
+    (void)s;
 #endif
 }
 

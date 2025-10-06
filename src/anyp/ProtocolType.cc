@@ -13,9 +13,7 @@ const char * ProtocolType_str[] = {
 	"HTTPS",
 	"COAP",
 	"COAPS",
-	"GOPHER",
 	"WAIS",
-	"CACHE_OBJECT",
 	"ICP",
 #if USE_HTCP
 	"HTCP",

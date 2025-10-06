@@ -97,11 +97,12 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
 	$(top_srcdir)/acinclude/squid-util.m4 \
 	$(top_srcdir)/acinclude/compiler-flags.m4 \
 	$(top_srcdir)/acinclude/os-deps.m4 \
-	$(top_srcdir)/acinclude/krb5.m4 $(top_srcdir)/acinclude/pam.m4 \
+	$(top_srcdir)/acinclude/krb5.m4 \
+	$(top_srcdir)/acinclude/ldap.m4 $(top_srcdir)/acinclude/pam.m4 \
 	$(top_srcdir)/acinclude/pkg.m4 $(top_srcdir)/acinclude/tdb.m4 \
 	$(top_srcdir)/acinclude/lib-checks.m4 \
-	$(top_srcdir)/acinclude/ax_cxx_compile_stdcxx_11.m4 \
-	$(top_srcdir)/acinclude/ax_cxx_0x_types.m4 \
+	$(top_srcdir)/acinclude/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/acinclude/win32-sspi.m4 \
 	$(top_srcdir)/src/auth/basic/helpers.m4 \
 	$(top_srcdir)/src/auth/basic/DB/required.m4 \
 	$(top_srcdir)/src/auth/basic/LDAP/required.m4 \
@@ -112,7 +113,6 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
 	$(top_srcdir)/src/auth/basic/RADIUS/required.m4 \
 	$(top_srcdir)/src/auth/basic/SASL/required.m4 \
 	$(top_srcdir)/src/auth/basic/SMB/required.m4 \
-	$(top_srcdir)/src/auth/basic/SMB_LM/required.m4 \
 	$(top_srcdir)/src/auth/basic/SSPI/required.m4 \
 	$(top_srcdir)/src/auth/basic/fake/required.m4 \
 	$(top_srcdir)/src/auth/basic/getpwnam/required.m4 \
@@ -126,7 +126,6 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
 	$(top_srcdir)/src/auth/negotiate/wrapper/required.m4 \
 	$(top_srcdir)/src/auth/ntlm/helpers.m4 \
 	$(top_srcdir)/src/auth/ntlm/fake/required.m4 \
-	$(top_srcdir)/src/auth/ntlm/SMB_LM/required.m4 \
 	$(top_srcdir)/src/auth/ntlm/SSPI/required.m4 \
 	$(top_srcdir)/src/log/helpers.m4 \
 	$(top_srcdir)/src/log/DB/required.m4 \
@@ -165,14 +164,17 @@ CONFIG_CLEAN_VPATH_FILES =
 LTLIBRARIES = $(noinst_LTLIBRARIES)
 libcomm_la_LIBADD =
 am_libcomm_la_OBJECTS = AcceptLimiter.lo ConnOpener.lo Connection.lo \
-	IoCallback.lo ModDevPoll.lo ModEpoll.lo ModKqueue.lo \
-	ModPoll.lo ModSelect.lo ModSelectWin32.lo Read.lo \
+	Incoming.lo IoCallback.lo ModDevPoll.lo ModEpoll.lo \
+	ModKqueue.lo ModPoll.lo ModSelect.lo Read.lo Tcp.lo \
 	TcpAcceptor.lo Write.lo
 libcomm_la_OBJECTS = $(am_libcomm_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+libminimal_la_LIBADD =
+am_libminimal_la_OBJECTS = minimal.lo
+libminimal_la_OBJECTS = $(am_libminimal_la_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -190,11 +192,12 @@ depcomp = $(SHELL) $(top_srcdir)/cfgaux/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/AcceptLimiter.Plo \
 	./$(DEPDIR)/ConnOpener.Plo ./$(DEPDIR)/Connection.Plo \
-	./$(DEPDIR)/IoCallback.Plo ./$(DEPDIR)/ModDevPoll.Plo \
-	./$(DEPDIR)/ModEpoll.Plo ./$(DEPDIR)/ModKqueue.Plo \
-	./$(DEPDIR)/ModPoll.Plo ./$(DEPDIR)/ModSelect.Plo \
-	./$(DEPDIR)/ModSelectWin32.Plo ./$(DEPDIR)/Read.Plo \
-	./$(DEPDIR)/TcpAcceptor.Plo ./$(DEPDIR)/Write.Plo
+	./$(DEPDIR)/Incoming.Plo ./$(DEPDIR)/IoCallback.Plo \
+	./$(DEPDIR)/ModDevPoll.Plo ./$(DEPDIR)/ModEpoll.Plo \
+	./$(DEPDIR)/ModKqueue.Plo ./$(DEPDIR)/ModPoll.Plo \
+	./$(DEPDIR)/ModSelect.Plo ./$(DEPDIR)/Read.Plo \
+	./$(DEPDIR)/Tcp.Plo ./$(DEPDIR)/TcpAcceptor.Plo \
+	./$(DEPDIR)/Write.Plo ./$(DEPDIR)/minimal.Plo
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -232,8 +235,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libcomm_la_SOURCES)
-DIST_SOURCES = $(libcomm_la_SOURCES)
+SOURCES = $(libcomm_la_SOURCES) $(libminimal_la_SOURCES)
+DIST_SOURCES = $(libcomm_la_SOURCES) $(libminimal_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -483,7 +486,6 @@ AWK = @AWK@
 BASIC_AUTH_HELPERS = @BASIC_AUTH_HELPERS@
 BUILDCXX = @BUILDCXX@
 BUILDCXXFLAGS = @BUILDCXXFLAGS@
-BZR = @BZR@
 CACHE_EFFECTIVE_USER = @CACHE_EFFECTIVE_USER@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
@@ -524,26 +526,22 @@ EPOLL_LIBS = @EPOLL_LIBS@
 ETAGS = @ETAGS@
 EUILIB = @EUILIB@
 EXEEXT = @EXEEXT@
-EXPATLIB = @EXPATLIB@
 EXTERNAL_ACL_HELPERS = @EXTERNAL_ACL_HELPERS@
 EXT_LIBECAP_CFLAGS = @EXT_LIBECAP_CFLAGS@
 EXT_LIBECAP_LIBS = @EXT_LIBECAP_LIBS@
 FALSE = @FALSE@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
+GIT = @GIT@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX17 = @HAVE_CXX17@
 INCLTDL = @INCLTDL@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-KRB5INCS = @KRB5INCS@
-KRB5LIBS = @KRB5LIBS@
-LBERLIB = @LBERLIB@
 LD = @LD@
-LDAPLIB = @LDAPLIB@
 LDAPSEARCH = @LDAPSEARCH@
 LDFLAGS = @LDFLAGS@
 LIBADD_DL = @LIBADD_DL@
@@ -551,24 +549,38 @@ LIBADD_DLD_LINK = @LIBADD_DLD_LINK@
 LIBADD_DLOPEN = @LIBADD_DLOPEN@
 LIBADD_SHL_LOAD = @LIBADD_SHL_LOAD@
 LIBBDB_LIBS = @LIBBDB_LIBS@
+LIBCAP_CFLAGS = @LIBCAP_CFLAGS@
+LIBCAP_LIBS = @LIBCAP_LIBS@
 LIBCPPUNIT_CFLAGS = @LIBCPPUNIT_CFLAGS@
 LIBCPPUNIT_LIBS = @LIBCPPUNIT_LIBS@
 LIBGNUTLS_CFLAGS = @LIBGNUTLS_CFLAGS@
 LIBGNUTLS_LIBS = @LIBGNUTLS_LIBS@
+LIBGSS_CFLAGS = @LIBGSS_CFLAGS@
+LIBGSS_LIBS = @LIBGSS_LIBS@
+LIBHEIMDAL_KRB5_CFLAGS = @LIBHEIMDAL_KRB5_CFLAGS@
+LIBHEIMDAL_KRB5_LIBS = @LIBHEIMDAL_KRB5_LIBS@
+LIBLDAP_CFLAGS = @LIBLDAP_CFLAGS@
+LIBLDAP_LIBS = @LIBLDAP_LIBS@
 LIBLTDL = @LIBLTDL@
+LIBMIT_KRB5_CFLAGS = @LIBMIT_KRB5_CFLAGS@
+LIBMIT_KRB5_LIBS = @LIBMIT_KRB5_LIBS@
+LIBNETFILTER_CONNTRACK_CFLAGS = @LIBNETFILTER_CONNTRACK_CFLAGS@
+LIBNETFILTER_CONNTRACK_LIBS = @LIBNETFILTER_CONNTRACK_LIBS@
+LIBNETTLE_CFLAGS = @LIBNETTLE_CFLAGS@
+LIBNETTLE_LIBS = @LIBNETTLE_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBOPENSSL_CFLAGS = @LIBOPENSSL_CFLAGS@
 LIBOPENSSL_LIBS = @LIBOPENSSL_LIBS@
+LIBPSAPI_LIBS = @LIBPSAPI_LIBS@
 LIBPTHREADS = @LIBPTHREADS@
 LIBS = @LIBS@
-LIBSASL = @LIBSASL@
+LIBSASL_CFLAGS = @LIBSASL_CFLAGS@
+LIBSASL_LIBS = @LIBSASL_LIBS@
+LIBSYSTEMD_CFLAGS = @LIBSYSTEMD_CFLAGS@
+LIBSYSTEMD_LIBS = @LIBSYSTEMD_LIBS@
 LIBTDB_CFLAGS = @LIBTDB_CFLAGS@
 LIBTDB_LIBS = @LIBTDB_LIBS@
 LIBTOOL = @LIBTOOL@
-LIBXML2_CFLAGS = @LIBXML2_CFLAGS@
-LIBXML2_LIBS = @LIBXML2_LIBS@
-LIB_KRB5_CFLAGS = @LIB_KRB5_CFLAGS@
-LIB_KRB5_LIBS = @LIB_KRB5_LIBS@
 LINUXDOC = @LINUXDOC@
 LIPO = @LIPO@
 LN = @LN@
@@ -591,7 +603,6 @@ MKDIR = @MKDIR@
 MKDIR_P = @MKDIR_P@
 MV = @MV@
 NEGOTIATE_AUTH_HELPERS = @NEGOTIATE_AUTH_HELPERS@
-NETTLELIB = @NETTLELIB@
 NM = @NM@
 NMEDIT = @NMEDIT@
 NTLM_AUTH_HELPERS = @NTLM_AUTH_HELPERS@
@@ -630,21 +641,18 @@ SMBCLIENT = @SMBCLIENT@
 SNMPLIB = @SNMPLIB@
 SQUID_CFLAGS = @SQUID_CFLAGS@
 SQUID_CXXFLAGS = @SQUID_CXXFLAGS@
+SQUID_RELEASE = @SQUID_RELEASE@
 SSLLIB = @SSLLIB@
 STOREID_REWRITE_HELPERS = @STOREID_REWRITE_HELPERS@
 STORE_LIBS_TO_ADD = @STORE_LIBS_TO_ADD@
 STORE_LIBS_TO_BUILD = @STORE_LIBS_TO_BUILD@
 STORE_TESTS = @STORE_TESTS@
 STRIP = @STRIP@
-SYSTEMD_CFLAGS = @SYSTEMD_CFLAGS@
-SYSTEMD_LIBS = @SYSTEMD_LIBS@
 TR = @TR@
 TRUE = @TRUE@
 URL_REWRITE_HELPERS = @URL_REWRITE_HELPERS@
 VERSION = @VERSION@
 WBINFO = @WBINFO@
-WIN32_PSAPI = @WIN32_PSAPI@
-XMLLIB = @XMLLIB@
 XTRA_LIBS = @XTRA_LIBS@
 XTRA_OBJS = @XTRA_OBJS@
 abs_builddir = @abs_builddir@
@@ -731,13 +739,17 @@ CLEANFILES = testHeaders
 TESTS = testHeaders
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/include \
 	-I$(top_srcdir)/lib -I$(top_srcdir)/src \
-	-I$(top_builddir)/include $(LIBCPPUNIT_CFLAGS) $(KRB5INCS) \
-	$(am__append_1)
-@ENABLE_XPROF_STATS_FALSE@LIBPROFILER = 
-@ENABLE_XPROF_STATS_TRUE@LIBPROFILER = $(top_builddir)/lib/profiler/libprofiler.la
+	-I$(top_builddir)/include $(LIBCPPUNIT_CFLAGS) $(am__append_1)
 COMPAT_LIB = $(top_builddir)/compat/libcompatsquid.la $(LIBPROFILER)
 subst_perlshell = sed -e 's,[@]PERL[@],$(PERL),g' <$(srcdir)/$@.pl.in >$@ || ($(RM) -f $@ ; exit 1)
-noinst_LTLIBRARIES = libcomm.la
+
+# A space-separated list of header files to be skipped by
+# testHeaders during "make check"
+EXCLUDE_FROM_HDR_TESTING = 
+noinst_LTLIBRARIES = \
+	libcomm.la \
+	libminimal.la
+
 libcomm_la_SOURCES = \
 	AcceptLimiter.cc \
 	AcceptLimiter.h \
@@ -746,6 +758,8 @@ libcomm_la_SOURCES = \
 	Connection.cc \
 	Connection.h \
 	Flag.h \
+	Incoming.cc \
+	Incoming.h \
 	IoCallback.cc \
 	IoCallback.h \
 	Loops.h \
@@ -754,21 +768,26 @@ libcomm_la_SOURCES = \
 	ModKqueue.cc \
 	ModPoll.cc \
 	ModSelect.cc \
-	ModSelectWin32.cc \
 	Read.cc \
 	Read.h \
+	Tcp.cc \
+	Tcp.h \
 	TcpAcceptor.cc \
 	TcpAcceptor.h \
-	UdpOpenDialer.h \
 	Write.cc \
 	Write.h \
 	comm_internal.h \
 	forward.h
 
+
+# a bare-bones implementation of few Comm APIs sufficient for helpers use
+libminimal_la_SOURCES = \
+	minimal.cc
+
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cc .lo .log .o .obj .test .test$(EXEEXT) .trs
+.SUFFIXES: .cc .h .hdrtest .lo .log .o .obj .test .test$(EXEEXT) .trs
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(top_srcdir)/src/Common.am $(top_srcdir)/src/TestHeaders.am $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -823,6 +842,9 @@ clean-noinstLTLIBRARIES:
 libcomm.la: $(libcomm_la_OBJECTS) $(libcomm_la_DEPENDENCIES) $(EXTRA_libcomm_la_DEPENDENCIES) 
 	$(AM_V_CXXLD)$(CXXLINK)  $(libcomm_la_OBJECTS) $(libcomm_la_LIBADD) $(LIBS)
 
+libminimal.la: $(libminimal_la_OBJECTS) $(libminimal_la_DEPENDENCIES) $(EXTRA_libminimal_la_DEPENDENCIES) 
+	$(AM_V_CXXLD)$(CXXLINK)  $(libminimal_la_OBJECTS) $(libminimal_la_LIBADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -832,16 +854,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AcceptLimiter.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ConnOpener.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Connection.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Incoming.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IoCallback.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ModDevPoll.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ModEpoll.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ModKqueue.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ModPoll.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ModSelect.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ModSelectWin32.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Read.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Tcp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TcpAcceptor.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Write.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minimal.Plo@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -1175,16 +1199,18 @@ distclean: distclean-am
 		-rm -f ./$(DEPDIR)/AcceptLimiter.Plo
 	-rm -f ./$(DEPDIR)/ConnOpener.Plo
 	-rm -f ./$(DEPDIR)/Connection.Plo
+	-rm -f ./$(DEPDIR)/Incoming.Plo
 	-rm -f ./$(DEPDIR)/IoCallback.Plo
 	-rm -f ./$(DEPDIR)/ModDevPoll.Plo
 	-rm -f ./$(DEPDIR)/ModEpoll.Plo
 	-rm -f ./$(DEPDIR)/ModKqueue.Plo
 	-rm -f ./$(DEPDIR)/ModPoll.Plo
 	-rm -f ./$(DEPDIR)/ModSelect.Plo
-	-rm -f ./$(DEPDIR)/ModSelectWin32.Plo
 	-rm -f ./$(DEPDIR)/Read.Plo
+	-rm -f ./$(DEPDIR)/Tcp.Plo
 	-rm -f ./$(DEPDIR)/TcpAcceptor.Plo
 	-rm -f ./$(DEPDIR)/Write.Plo
+	-rm -f ./$(DEPDIR)/minimal.Plo
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1233,16 +1259,18 @@ maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/AcceptLimiter.Plo
 	-rm -f ./$(DEPDIR)/ConnOpener.Plo
 	-rm -f ./$(DEPDIR)/Connection.Plo
+	-rm -f ./$(DEPDIR)/Incoming.Plo
 	-rm -f ./$(DEPDIR)/IoCallback.Plo
 	-rm -f ./$(DEPDIR)/ModDevPoll.Plo
 	-rm -f ./$(DEPDIR)/ModEpoll.Plo
 	-rm -f ./$(DEPDIR)/ModKqueue.Plo
 	-rm -f ./$(DEPDIR)/ModPoll.Plo
 	-rm -f ./$(DEPDIR)/ModSelect.Plo
-	-rm -f ./$(DEPDIR)/ModSelectWin32.Plo
 	-rm -f ./$(DEPDIR)/Read.Plo
+	-rm -f ./$(DEPDIR)/Tcp.Plo
 	-rm -f ./$(DEPDIR)/TcpAcceptor.Plo
 	-rm -f ./$(DEPDIR)/Write.Plo
+	-rm -f ./$(DEPDIR)/minimal.Plo
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -1283,10 +1311,26 @@ uninstall-am:
 
 $(OBJS): $(top_srcdir)/include/version.h $(top_builddir)/include/autoconf.h
 
-testHeaders: $(srcdir)/*.h
-	$(SHELL) $(top_srcdir)/test-suite/testheaders.sh "$(CXXCOMPILE)" $^ || exit 1
+# to test header files in addition to those tested by default,
+# add an empty target named 'testHeaders' depending on the additional
+# headers to test
 
-.PHONY: testHeaders
+testHeaders: $(SOURCES) $(noinst_HEADERS) $(EXTRA_DIST) $(top_srcdir)/test-suite/testHeader.cc.in
+	$(MAKE) $(^:.h=.hdrtest) && cp $(TRUE) $@
+
+.h.hdrtest:
+	@SrcFilePath=`echo $< | $(SED) 's%^$(top_srcdir)/%%'`; \
+	SrcFileName=`basename $$SrcFilePath`; \
+	TargetFileName=tmp$$$$-`basename $@`; \
+	if test "$(EXCLUDE_FROM_HDR_TESTING)" != "" && echo "$(EXCLUDE_FROM_HDR_TESTING)" | $(TR) ' ' '\n' | $(FGREP) -x -q "$$SrcFileName" ; then \
+		echo "header-test: skip - $$SrcFilePath"; \
+		exit 0; \
+	fi; \
+	$(SED) "s%[@]HEADER[@]%${<}%" "$(top_srcdir)/test-suite/testHeader.cc.in" >"$$TargetFileName.cc" && \
+	echo "$(CXXCOMPILE) -c -o" "$$TargetFileName" "$$TargetFileName.cc" && \
+	if $(CXXCOMPILE) -c -o "$$TargetFileName" "$$TargetFileName.cc" ; \
+		then echo "header-test: ok - $$SrcFilePath"; $(RM) "$$TargetFileName.cc" "$$TargetFileName"; \
+		else echo "header-test: not ok - $$SrcFilePath"; exit 1; fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

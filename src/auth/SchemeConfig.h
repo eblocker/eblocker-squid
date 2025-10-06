@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -94,7 +94,7 @@ public:
      \retval false  Not configured or Configuration Error.
      *          No other module functions except Shutdown/Dump/Parse/FreeConfig will be called by Squid.
      */
-    virtual bool configured() const = 0;
+    virtual bool configured() const;
 
     /**
      * Shutdown just the auth helpers.
@@ -119,7 +119,7 @@ public:
     virtual void registerWithCacheManager(void);
 
     /** parse config options */
-    virtual void parse(SchemeConfig *, int, char *);
+    virtual void parse(SchemeConfig *, size_t, char *);
 
     /** the http string id */
     virtual const char * type() const = 0;
@@ -130,7 +130,7 @@ public:
     String keyExtrasLine;  ///< The format of the request to the auth helper
     Format::Format *keyExtras = nullptr; ///< The compiled request format
     int keep_alive = 1; ///< whether to close the connection on auth challenges. default: on
-    int utf8 = 0; ///< wheter to accept UTF-8 characterset instead of ASCII. default: off
+    int utf8 = 0; ///< whether to accept UTF-8 characterset instead of ASCII. default: off
 
 protected:
     /**

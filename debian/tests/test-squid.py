@@ -136,15 +136,6 @@ class BasicTest(HttpdCommon):
         self._test_url_proxy("ftp://anonymous@localhost:21", "irectory",
                              "http://localhost:3128/")
 
-    def test_squidclient(self):
-        '''Test squidclient'''
-        url = 'ftp://anonymous@localhost:21'
-        ret, report = cmd(['squidclient', '-h', '127.0.0.1', '-p',
-                           '3128', '-r', url])
-        expected = 0
-        result = 'Got exit code %d, expected %d\n' % (ret, expected)
-        self.assertEqual(expected, ret, result + report)
-
 
     # Run this last so if we enable the profile then we don't unload it
     def test_zz_apparmor(self):

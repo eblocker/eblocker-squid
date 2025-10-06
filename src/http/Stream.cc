@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -8,6 +8,7 @@
 
 #include "squid.h"
 #include "client_side_request.h"
+#include "clientStream.h"
 #include "http/Stream.h"
 #include "HttpHdrContRange.h"
 #include "HttpHeaderTools.h"
@@ -72,12 +73,6 @@ Http::Stream::writeComplete(size_t size)
            (entry ? entry->objectLen() : 0));
 
     http->out.size += size;
-
-    if (clientHttpRequestStatus(clientConnection->fd, http)) {
-        initiateClose("failure or true request status");
-        /* Do we leak here ? */
-        return;
-    }
 
     switch (socketState()) {
 
@@ -281,9 +276,6 @@ Http::Stream::sendStartOfMessage(HttpReply *rep, StoreIOBuffer bodyData)
 
     /* Save length of headers for persistent conn checks */
     http->out.headers_sz = mb->contentSize();
-#if HEADERS_LOG
-    headersLog(0, 0, http->request->method, rep);
-#endif
 
     if (bodyData.data && bodyData.length) {
         if (multipartRangeRequest())
@@ -299,10 +291,10 @@ Http::Stream::sendStartOfMessage(HttpReply *rep, StoreIOBuffer bodyData)
 #if USE_DELAY_POOLS
     for (const auto &pool: MessageDelayPools::Instance()->pools) {
         if (pool->access) {
-            std::unique_ptr<ACLFilledChecklist> chl(clientAclChecklistCreate(pool->access, http));
-            chl->reply = rep;
-            HTTPMSGLOCK(chl->reply);
-            const auto answer = chl->fastCheck();
+            ACLFilledChecklist chl(pool->access, nullptr);
+            clientAclChecklistFill(chl, http);
+            chl.updateReply(rep);
+            const auto &answer = chl.fastCheck();
             if (answer.allowed()) {
                 writeQuotaHandler = pool->createBucket();
                 fd_table[clientConnection->fd].writeQuotaHandler = writeQuotaHandler;
@@ -389,7 +381,7 @@ clientIfRangeMatch(ClientHttpRequest * http, HttpReply * rep)
 {
     const TimeOrTag spec = http->request->header.getTimeOrTag(Http::HdrType::IF_RANGE);
 
-    /* check for parsing falure */
+    /* check for parsing failure */
     if (!spec.valid)
         return false;
 
@@ -452,7 +444,7 @@ Http::Stream::buildRangeHeader(HttpReply *rep)
     /* hits only - upstream CachePeer determines correct behaviour on misses,
      * and client_side_reply determines hits candidates
      */
-    else if (http->logType.isTcpHit() &&
+    else if (http->loggingTags().isTcpHit() &&
              http->request->header.has(Http::HdrType::IF_RANGE) &&
              !clientIfRangeMatch(http, rep))
         range_err = "If-Range match failed";
@@ -461,7 +453,7 @@ Http::Stream::buildRangeHeader(HttpReply *rep)
         range_err = "canonization failed";
     else if (http->request->range->isComplex())
         range_err = "too complex range header";
-    else if (!http->logType.isTcpHit() && http->request->range->offsetLimitExceeded(roffLimit))
+    else if (!http->loggingTags().isTcpHit() && http->request->range->offsetLimitExceeded(roffLimit))
         range_err = "range outside range_offset_limit";
 
     /* get rid of our range specs on error */
@@ -534,7 +526,7 @@ Http::Stream::noteIoError(const Error &error, const LogTagsErrors &lte)
 {
     if (http) {
         http->updateError(error);
-        http->logType.err.update(lte);
+        http->al->cache.code.err.update(lte);
     }
 }
 
