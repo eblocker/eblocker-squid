@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -9,7 +9,10 @@
 #ifndef SQUID_SRC_SECURITY_LOCKINGPOINTER_H
 #define SQUID_SRC_SECURITY_LOCKINGPOINTER_H
 
+#include "base/Assure.h"
 #include "base/HardFun.h"
+
+#include <cstddef>
 
 #if USE_OPENSSL
 #include "compat/openssl.h"
@@ -26,13 +29,6 @@
         }
 
 #endif /* USE_OPENSSL */
-
-// Macro to be used to define the C++ equivalent function of an extern "C"
-// function. The C++ function suffixed with the _cpp extension
-#define CtoCpp1(function, argument) \
-        extern "C++" inline void function ## _cpp(argument a) { \
-            function(a); \
-        }
 
 namespace Security
 {
@@ -100,6 +96,7 @@ public:
     bool operator ==(const SelfType &o) const { return (o.get() == raw); }
     bool operator !=(const SelfType &o) const { return (o.get() != raw); }
 
+    T &operator *() const { Assure(raw); return *raw; }
     T *operator ->() const { return raw; }
 
     /// Returns raw and possibly nullptr pointer
@@ -154,7 +151,7 @@ private:
      * their reference counts independently, or it may not. This varies between
      * API functions, though it is usually documented.
      *
-     * This means the caller code needs to be carefuly written to use the correct
+     * This means the caller code needs to be carefully written to use the correct
      * reset method and avoid the raw-pointer constructor unless OpenSSL function
      * producing the pointer is clearly documented as incrementing a lock for it.
      */

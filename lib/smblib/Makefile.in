@@ -89,7 +89,6 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS =
-TESTS =
 @ENABLE_LOADABLE_MODULES_TRUE@am__append_1 = $(INCLTDL)
 subdir = lib/smblib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -98,11 +97,12 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
 	$(top_srcdir)/acinclude/squid-util.m4 \
 	$(top_srcdir)/acinclude/compiler-flags.m4 \
 	$(top_srcdir)/acinclude/os-deps.m4 \
-	$(top_srcdir)/acinclude/krb5.m4 $(top_srcdir)/acinclude/pam.m4 \
+	$(top_srcdir)/acinclude/krb5.m4 \
+	$(top_srcdir)/acinclude/ldap.m4 $(top_srcdir)/acinclude/pam.m4 \
 	$(top_srcdir)/acinclude/pkg.m4 $(top_srcdir)/acinclude/tdb.m4 \
 	$(top_srcdir)/acinclude/lib-checks.m4 \
-	$(top_srcdir)/acinclude/ax_cxx_compile_stdcxx_11.m4 \
-	$(top_srcdir)/acinclude/ax_cxx_0x_types.m4 \
+	$(top_srcdir)/acinclude/ax_cxx_compile_stdcxx.m4 \
+	$(top_srcdir)/acinclude/win32-sspi.m4 \
 	$(top_srcdir)/src/auth/basic/helpers.m4 \
 	$(top_srcdir)/src/auth/basic/DB/required.m4 \
 	$(top_srcdir)/src/auth/basic/LDAP/required.m4 \
@@ -113,7 +113,6 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
 	$(top_srcdir)/src/auth/basic/RADIUS/required.m4 \
 	$(top_srcdir)/src/auth/basic/SASL/required.m4 \
 	$(top_srcdir)/src/auth/basic/SMB/required.m4 \
-	$(top_srcdir)/src/auth/basic/SMB_LM/required.m4 \
 	$(top_srcdir)/src/auth/basic/SSPI/required.m4 \
 	$(top_srcdir)/src/auth/basic/fake/required.m4 \
 	$(top_srcdir)/src/auth/basic/getpwnam/required.m4 \
@@ -127,7 +126,6 @@ am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
 	$(top_srcdir)/src/auth/negotiate/wrapper/required.m4 \
 	$(top_srcdir)/src/auth/ntlm/helpers.m4 \
 	$(top_srcdir)/src/auth/ntlm/fake/required.m4 \
-	$(top_srcdir)/src/auth/ntlm/SMB_LM/required.m4 \
 	$(top_srcdir)/src/auth/ntlm/SSPI/required.m4 \
 	$(top_srcdir)/src/log/helpers.m4 \
 	$(top_srcdir)/src/log/DB/required.m4 \
@@ -420,12 +418,8 @@ RECHECK_LOGS = $(TEST_LOGS)
 AM_RECURSIVE_TARGETS = check recheck
 TEST_SUITE_LOG = test-suite.log
 TEST_EXTENSIONS = @EXEEXT@ .test
-am__test_logs1 = $(TESTS:=.log)
-am__test_logs2 = $(am__test_logs1:@EXEEXT@.log=.log)
-TEST_LOGS = $(am__test_logs2:.test.log=.log)
-TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/cfgaux/test-driver
-TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
-	$(TEST_LOG_FLAGS)
+LOG_DRIVER = $(SHELL) $(top_srcdir)/cfgaux/test-driver
+LOG_COMPILE = $(LOG_COMPILER) $(AM_LOG_FLAGS) $(LOG_FLAGS)
 am__set_b = \
   case '$@' in \
     */*) \
@@ -436,8 +430,15 @@ am__set_b = \
     *) \
       b='$*';; \
   esac
+am__test_logs1 = $(TESTS:=.log)
+am__test_logs2 = $(am__test_logs1:@EXEEXT@.log=.log)
+TEST_LOGS = $(am__test_logs2:.test.log=.log)
+TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/cfgaux/test-driver
+TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
+	$(TEST_LOG_FLAGS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/cfgaux/depcomp \
-	$(top_srcdir)/cfgaux/test-driver $(top_srcdir)/src/Common.am
+	$(top_srcdir)/cfgaux/test-driver $(top_srcdir)/src/Common.am \
+	$(top_srcdir)/src/TestHeaders.am
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 ADAPTATION_LIBS = @ADAPTATION_LIBS@
@@ -457,7 +458,6 @@ AWK = @AWK@
 BASIC_AUTH_HELPERS = @BASIC_AUTH_HELPERS@
 BUILDCXX = @BUILDCXX@
 BUILDCXXFLAGS = @BUILDCXXFLAGS@
-BZR = @BZR@
 CACHE_EFFECTIVE_USER = @CACHE_EFFECTIVE_USER@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
@@ -498,26 +498,22 @@ EPOLL_LIBS = @EPOLL_LIBS@
 ETAGS = @ETAGS@
 EUILIB = @EUILIB@
 EXEEXT = @EXEEXT@
-EXPATLIB = @EXPATLIB@
 EXTERNAL_ACL_HELPERS = @EXTERNAL_ACL_HELPERS@
 EXT_LIBECAP_CFLAGS = @EXT_LIBECAP_CFLAGS@
 EXT_LIBECAP_LIBS = @EXT_LIBECAP_LIBS@
 FALSE = @FALSE@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
+GIT = @GIT@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
+HAVE_CXX17 = @HAVE_CXX17@
 INCLTDL = @INCLTDL@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-KRB5INCS = @KRB5INCS@
-KRB5LIBS = @KRB5LIBS@
-LBERLIB = @LBERLIB@
 LD = @LD@
-LDAPLIB = @LDAPLIB@
 LDAPSEARCH = @LDAPSEARCH@
 LDFLAGS = @LDFLAGS@
 LIBADD_DL = @LIBADD_DL@
@@ -525,24 +521,38 @@ LIBADD_DLD_LINK = @LIBADD_DLD_LINK@
 LIBADD_DLOPEN = @LIBADD_DLOPEN@
 LIBADD_SHL_LOAD = @LIBADD_SHL_LOAD@
 LIBBDB_LIBS = @LIBBDB_LIBS@
+LIBCAP_CFLAGS = @LIBCAP_CFLAGS@
+LIBCAP_LIBS = @LIBCAP_LIBS@
 LIBCPPUNIT_CFLAGS = @LIBCPPUNIT_CFLAGS@
 LIBCPPUNIT_LIBS = @LIBCPPUNIT_LIBS@
 LIBGNUTLS_CFLAGS = @LIBGNUTLS_CFLAGS@
 LIBGNUTLS_LIBS = @LIBGNUTLS_LIBS@
+LIBGSS_CFLAGS = @LIBGSS_CFLAGS@
+LIBGSS_LIBS = @LIBGSS_LIBS@
+LIBHEIMDAL_KRB5_CFLAGS = @LIBHEIMDAL_KRB5_CFLAGS@
+LIBHEIMDAL_KRB5_LIBS = @LIBHEIMDAL_KRB5_LIBS@
+LIBLDAP_CFLAGS = @LIBLDAP_CFLAGS@
+LIBLDAP_LIBS = @LIBLDAP_LIBS@
 LIBLTDL = @LIBLTDL@
+LIBMIT_KRB5_CFLAGS = @LIBMIT_KRB5_CFLAGS@
+LIBMIT_KRB5_LIBS = @LIBMIT_KRB5_LIBS@
+LIBNETFILTER_CONNTRACK_CFLAGS = @LIBNETFILTER_CONNTRACK_CFLAGS@
+LIBNETFILTER_CONNTRACK_LIBS = @LIBNETFILTER_CONNTRACK_LIBS@
+LIBNETTLE_CFLAGS = @LIBNETTLE_CFLAGS@
+LIBNETTLE_LIBS = @LIBNETTLE_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBOPENSSL_CFLAGS = @LIBOPENSSL_CFLAGS@
 LIBOPENSSL_LIBS = @LIBOPENSSL_LIBS@
+LIBPSAPI_LIBS = @LIBPSAPI_LIBS@
 LIBPTHREADS = @LIBPTHREADS@
 LIBS = @LIBS@
-LIBSASL = @LIBSASL@
+LIBSASL_CFLAGS = @LIBSASL_CFLAGS@
+LIBSASL_LIBS = @LIBSASL_LIBS@
+LIBSYSTEMD_CFLAGS = @LIBSYSTEMD_CFLAGS@
+LIBSYSTEMD_LIBS = @LIBSYSTEMD_LIBS@
 LIBTDB_CFLAGS = @LIBTDB_CFLAGS@
 LIBTDB_LIBS = @LIBTDB_LIBS@
 LIBTOOL = @LIBTOOL@
-LIBXML2_CFLAGS = @LIBXML2_CFLAGS@
-LIBXML2_LIBS = @LIBXML2_LIBS@
-LIB_KRB5_CFLAGS = @LIB_KRB5_CFLAGS@
-LIB_KRB5_LIBS = @LIB_KRB5_LIBS@
 LINUXDOC = @LINUXDOC@
 LIPO = @LIPO@
 LN = @LN@
@@ -565,7 +575,6 @@ MKDIR = @MKDIR@
 MKDIR_P = @MKDIR_P@
 MV = @MV@
 NEGOTIATE_AUTH_HELPERS = @NEGOTIATE_AUTH_HELPERS@
-NETTLELIB = @NETTLELIB@
 NM = @NM@
 NMEDIT = @NMEDIT@
 NTLM_AUTH_HELPERS = @NTLM_AUTH_HELPERS@
@@ -604,21 +613,18 @@ SMBCLIENT = @SMBCLIENT@
 SNMPLIB = @SNMPLIB@
 SQUID_CFLAGS = @SQUID_CFLAGS@
 SQUID_CXXFLAGS = @SQUID_CXXFLAGS@
+SQUID_RELEASE = @SQUID_RELEASE@
 SSLLIB = @SSLLIB@
 STOREID_REWRITE_HELPERS = @STOREID_REWRITE_HELPERS@
 STORE_LIBS_TO_ADD = @STORE_LIBS_TO_ADD@
 STORE_LIBS_TO_BUILD = @STORE_LIBS_TO_BUILD@
 STORE_TESTS = @STORE_TESTS@
 STRIP = @STRIP@
-SYSTEMD_CFLAGS = @SYSTEMD_CFLAGS@
-SYSTEMD_LIBS = @SYSTEMD_LIBS@
 TR = @TR@
 TRUE = @TRUE@
 URL_REWRITE_HELPERS = @URL_REWRITE_HELPERS@
 VERSION = @VERSION@
 WBINFO = @WBINFO@
-WIN32_PSAPI = @WIN32_PSAPI@
-XMLLIB = @XMLLIB@
 XTRA_LIBS = @XTRA_LIBS@
 XTRA_OBJS = @XTRA_OBJS@
 abs_builddir = @abs_builddir@
@@ -701,15 +707,18 @@ DEFAULT_ICON_DIR = $(datadir)/icons
 DEFAULT_ERROR_DIR = $(datadir)/errors
 AM_CFLAGS = $(SQUID_CFLAGS)
 AM_CXXFLAGS = $(SQUID_CXXFLAGS)
-CLEANFILES = 
+CLEANFILES = testHeaders
+TESTS = testHeaders
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/include \
 	-I$(top_srcdir)/lib -I$(top_srcdir)/src \
-	-I$(top_builddir)/include $(LIBCPPUNIT_CFLAGS) $(KRB5INCS) \
-	$(am__append_1) -I$(top_srcdir)/lib
-@ENABLE_XPROF_STATS_FALSE@LIBPROFILER = 
-@ENABLE_XPROF_STATS_TRUE@LIBPROFILER = $(top_builddir)/lib/profiler/libprofiler.la
+	-I$(top_builddir)/include $(LIBCPPUNIT_CFLAGS) $(am__append_1) \
+	-I$(top_srcdir)/lib
 COMPAT_LIB = $(top_builddir)/compat/libcompatsquid.la $(LIBPROFILER)
 subst_perlshell = sed -e 's,[@]PERL[@],$(PERL),g' <$(srcdir)/$@.pl.in >$@ || ($(RM) -f $@ ; exit 1)
+
+# A space-separated list of header files to be skipped by
+# testHeaders during "make check"
+EXCLUDE_FROM_HDR_TESTING = 
 noinst_LTLIBRARIES = libsmblib.la
 libsmblib_la_SOURCES = \
 	md4.c \
@@ -728,8 +737,8 @@ libsmblib_la_SOURCES = \
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .lo .log .o .obj .test .test$(EXEEXT) .trs
-$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(top_srcdir)/src/Common.am $(am__configure_deps)
+.SUFFIXES: .c .h .hdrtest .lo .log .o .obj .test .test$(EXEEXT) .trs
+$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(top_srcdir)/src/Common.am $(top_srcdir)/src/TestHeaders.am $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -749,7 +758,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__maybe_remake_depfiles)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__maybe_remake_depfiles);; \
 	esac;
-$(top_srcdir)/src/Common.am $(am__empty):
+$(top_srcdir)/src/Common.am $(top_srcdir)/src/TestHeaders.am $(am__empty):
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
@@ -1024,6 +1033,13 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
+testHeaders.log: testHeaders
+	@p='testHeaders'; \
+	b='testHeaders'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .test.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -1211,6 +1227,27 @@ uninstall-am:
 
 
 $(OBJS): $(top_srcdir)/include/version.h $(top_builddir)/include/autoconf.h
+
+# to test header files in addition to those tested by default,
+# add an empty target named 'testHeaders' depending on the additional
+# headers to test
+
+testHeaders: $(SOURCES) $(noinst_HEADERS) $(EXTRA_DIST) $(top_srcdir)/test-suite/testHeader.cc.in
+	$(MAKE) $(^:.h=.hdrtest) && cp $(TRUE) $@
+
+.h.hdrtest:
+	@SrcFilePath=`echo $< | $(SED) 's%^$(top_srcdir)/%%'`; \
+	SrcFileName=`basename $$SrcFilePath`; \
+	TargetFileName=tmp$$$$-`basename $@`; \
+	if test "$(EXCLUDE_FROM_HDR_TESTING)" != "" && echo "$(EXCLUDE_FROM_HDR_TESTING)" | $(TR) ' ' '\n' | $(FGREP) -x -q "$$SrcFileName" ; then \
+		echo "header-test: skip - $$SrcFilePath"; \
+		exit 0; \
+	fi; \
+	$(SED) "s%[@]HEADER[@]%${<}%" "$(top_srcdir)/test-suite/testHeader.cc.in" >"$$TargetFileName.cc" && \
+	echo "$(CXXCOMPILE) -c -o" "$$TargetFileName" "$$TargetFileName.cc" && \
+	if $(CXXCOMPILE) -c -o "$$TargetFileName" "$$TargetFileName.cc" ; \
+		then echo "header-test: ok - $$SrcFilePath"; $(RM) "$$TargetFileName.cc" "$$TargetFileName"; \
+		else echo "header-test: not ok - $$SrcFilePath"; exit 1; fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

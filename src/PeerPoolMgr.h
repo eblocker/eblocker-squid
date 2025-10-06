@@ -1,15 +1,16 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
  * Please see the COPYING and CONTRIBUTORS files for details.
  */
 
-#ifndef SQUID_PEERPOOLMGR_H
-#define SQUID_PEERPOOLMGR_H
+#ifndef SQUID_SRC_PEERPOOLMGR_H
+#define SQUID_SRC_PEERPOOLMGR_H
 
 #include "base/AsyncJob.h"
+#include "base/forward.h"
 #include "base/JobWait.h"
 #include "comm/forward.h"
 #include "security/forward.h"
@@ -21,7 +22,7 @@ class CommConnectCbParams;
 /// Maintains an fixed-size "standby" PconnPool for a single CachePeer.
 class PeerPoolMgr: public AsyncJob
 {
-    CBDATA_CLASS(PeerPoolMgr);
+    CBDATA_CHILD(PeerPoolMgr);
 
 public:
     typedef CbcPointer<PeerPoolMgr> Pointer;
@@ -30,13 +31,15 @@ public:
     static void Checkpoint(const Pointer &mgr, const char *reason);
 
     explicit PeerPoolMgr(CachePeer *aPeer);
-    virtual ~PeerPoolMgr();
+    ~PeerPoolMgr() override;
+
+    PrecomputedCodeContextPointer codeContext;
 
 protected:
     /* AsyncJob API */
-    virtual void start();
-    virtual void swanSong();
-    virtual bool doneAll() const;
+    void start() override;
+    void swanSong() override;
+    bool doneAll() const override;
 
     /// whether the peer is still out there and in a valid state we can safely use
     bool validPeer() const;
@@ -71,5 +74,5 @@ private:
     unsigned int addrUsed; ///< counter for cycling through peer addresses
 };
 
-#endif /* SQUID_PEERPOOLMGR_H */
+#endif /* SQUID_SRC_PEERPOOLMGR_H */
 

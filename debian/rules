@@ -18,12 +18,12 @@ datadir=/usr/share/squid
 DEB_DH_INSTALL_SOURCEDIR := $(INSTALLDIR)
 DEB_INSTALL_DOCS_squid-common := debian/copyright CONTRIBUTORS CREDITS QUICKSTART RELEASENOTES.html SPONSORS
 
-BUILDINFO := $(shell lsb_release -si 2>/dev/null)
+BUILDINFO := $(shell ( grep PRETTY_NAME /etc/os-release | sed -e 's/PRETTY_NAME=//' -e 's/"//g' ) 2>/dev/null )
 
 DEB_CONFIGURE_EXTRA_FLAGS := BUILDCXXFLAGS="$(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS)" \
 		BUILDCXX=$(CXX_FOR_BUILD) \
 		--with-build-environment=default \
-		--enable-build-info="$(BUILDINFO) $(DEB_HOST_ARCH_OS)" \
+		--enable-build-info="$(BUILDINFO)" \
 		--datadir=/usr/share/squid \
 		--sysconfdir=/etc/squid \
 		--libexecdir=/usr/lib/squid \
@@ -40,13 +40,12 @@ DEB_CONFIGURE_EXTRA_FLAGS := BUILDCXXFLAGS="$(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS)" 
 		--enable-auth-basic="DB,fake,getpwnam,LDAP,NCSA,PAM,POP3,RADIUS,SASL,SMB" \
 		--enable-auth-digest="file,LDAP" \
 		--enable-auth-negotiate="kerberos,wrapper" \
-		--enable-auth-ntlm="fake,SMB_LM" \
+		--enable-auth-ntlm="fake" \
 		--enable-external-acl-helpers="file_userip,kerberos_ldap_group,LDAP_group,session,SQL_session,time_quota,unix_group,wbinfo_group" \
 		--enable-security-cert-validators="fake" \
 		--enable-storeid-rewrite-helpers="file" \
 		--enable-url-rewrite-helpers="fake" \
 		--enable-eui \
-		--enable-esi \
 		--enable-icmp \
 		--enable-zph-qos \
 		--disable-translation \
@@ -79,31 +78,37 @@ override_dh_installinit:
 	dh_installinit -peblocker-squid --name=squid
 
 execute_after_dh_auto_install:
-	install -m 755 -g root -d $(INSTALLDIR)/usr/lib/cgi-bin
+	#
+	# /etc/squid Details
 	install -m 644 $(INSTALLDIR)/etc/squid/squid.conf.documented $(INSTALLDIR)/etc/squid/default.conf
 	install -m 755 -g root -d $(INSTALLDIR)/etc/squid/conf.d
 	install -m 644 -g root debian/debian.conf $(INSTALLDIR)/etc/squid/conf.d/debian.conf
-	mv $(INSTALLDIR)/usr/lib/squid/cachemgr.cgi $(INSTALLDIR)/usr/lib/cgi-bin/cachemgr.cgi
-	#install -m 755 -g root -d $(INSTALLDIR)/etc/init.d
-	install -m 755 -g root -d $(INSTALLDIR)/etc/logrotate.d
-	install -m 755 -g root -d $(INSTALLDIR)/etc/resolvconf
-	install -m 755 -g root -d $(INSTALLDIR)/etc/resolvconf/update-libc.d
-	install -m 755 -g root -d $(INSTALLDIR)/etc/systemd/system/squid.service.d
-	install -m 755 -g root -d $(INSTALLDIR)/etc/ufw/applications.d
-	install -m 755 -g root debian/squid.resolvconf $(INSTALLDIR)/etc/resolvconf/update-libc.d/squid
-	install -m 644 -g root debian/squid.logrotate $(INSTALLDIR)/etc/logrotate.d/squid
-	install -m 644 -g root debian/squid.ufw.profile $(INSTALLDIR)/etc/ufw/applications.d/squid
+	#
+	# FSM Paths
 	install -m 755 -g root -d debian/eblocker-squid/var/log
-	install -m 755 -g root -d debian/eblocker-squid/var/spool
 	install -m 750 -o proxy -g proxy -d debian/eblocker-squid/var/log/squid
+	install -m 755 -g root -d debian/eblocker-squid/var/spool
 	install -m 750 -o proxy -g proxy -d debian/eblocker-squid/var/spool/squid
-	install -m 755 -g root -d $(INSTALLDIR)/usr/share/man/man1
-	mv $(INSTALLDIR)/usr/bin/purge $(INSTALLDIR)/usr/bin/squid-purge
-	mv $(INSTALLDIR)/usr/share/man/man1/purge.1 $(INSTALLDIR)/usr/share/man/man1/squid-purge.1
+	#
+	# apparmor Support
+	install -m 755 -g root -d $(INSTALLDIR)/etc/apparmor.d
 	install -m 755 -g root -d $(INSTALLDIR)/etc/apparmor.d/force-complain
 	install -m 755 -g root -d $(INSTALLDIR)/etc/apparmor.d/disable
 	install -m 644 -g root debian/usr.sbin.squid $(INSTALLDIR)/etc/apparmor.d
 	dh_apparmor --profile-name=usr.sbin.squid -peblocker-squid
+	#
+	# logrotate Support
+	install -m 755 -g root -d $(INSTALLDIR)/etc/logrotate.d
+	install -m 644 -g root debian/squid.logrotate $(INSTALLDIR)/etc/logrotate.d/squid
+	#
+	# resolvconf Support
+	install -m 755 -g root -d $(INSTALLDIR)/etc/resolvconf
+	install -m 755 -g root -d $(INSTALLDIR)/etc/resolvconf/update-libc.d
+	install -m 755 -g root debian/squid.resolvconf $(INSTALLDIR)/etc/resolvconf/update-libc.d/squid
+	#
+	# ufw Support
+	install -m 755 -g root -d $(INSTALLDIR)/etc/ufw/applications.d
+	install -m 644 -g root debian/squid.ufw.profile $(INSTALLDIR)/etc/ufw/applications.d/squid
 
 override_dh_install:
 	dh_install -peblocker-squid -peblocker-squid-common \
@@ -113,7 +118,7 @@ override_dh_installsystemd:
 	dh_installsystemd -peblocker-squid --name=squid
 
 override_dh_auto_clean:
-	$(RM) -r debian/build* debian/tmp*
+	$(RM) -r debian/build* debian/build-openssl debian/tmp*
 	dh_auto_clean
 
 # Disable dh_missing

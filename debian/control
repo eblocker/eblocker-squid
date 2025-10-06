@@ -4,20 +4,21 @@ Priority: optional
 Maintainer: Luigi Gangitano <luigi@debian.org>
 Uploaders: Santiago Garcia Mantinan <manty@debian.org>
 Homepage: http://www.squid-cache.org
-Standards-Version: 4.6.1
+Standards-Version: 4.7.2
 Vcs-Git: https://salsa.debian.org/squid-team/squid.git
 Vcs-Browser: https://salsa.debian.org/squid-team/squid
+Rules-Requires-Root: binary-targets
 Build-Depends: ed
-    , libltdl-dev
-    , pkg-config
+	, libltdl-dev
+	, pkgconf
 # The compiler dependencies are relevant for backporting.
-	, g++ (>= 4.9) <!cross> | clang (>= 3.7) <!cross>
-	, gcc (>= 4.9) <!cross> | clang (>= 3.7) <!cross>
+	, g++ (>= 5) <!cross> | clang (>= 3.8) <!cross>
+	, gcc (>= 5) <!cross> | clang (>= 3.8) <!cross>
 	, debhelper-compat (= 13)
-    , lsb-release
 	, dh-apparmor
 	, libcppunit-dev
 	, libcap2-dev [linux-any]
+	, libcrypt-dev
 	, libecap3-dev (>= 1.0.1-2)
 	, libexpat1-dev
 	, libgnutls28-dev (>= 3.5)
@@ -35,13 +36,15 @@ Build-Depends: ed
 Package: eblocker-squid
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends}, adduser
-Depends: ${shlibs:Depends}, ${misc:Depends}, netbase, logrotate (>= 3.5.4-1), eblocker-squid-common (>= ${source:Version}), lsb-base, libdbi-perl, eblocker-certificate-validator (>= 1.11)
-Suggests: squidclient, squid-cgi, squid-purge, resolvconf (>= 0.40), smbclient, ufw, winbind, apparmor
+Depends: ${shlibs:Depends}, ${misc:Depends}, netbase, logrotate (>= 3.5.4-1), eblocker-squid-common (>= ${source:Version}), libdbi-perl, eblocker-certificate-validator (>= 1.11)
+Suggests: resolvconf (>= 0.40), smbclient, ufw, winbind, apparmor
 Recommends: libcap2-bin [linux-any], ca-certificates
-Conflicts: squid-openssl
 Description: Full featured Web Proxy cache (HTTP proxy GnuTLS flavour)
  Squid is a high-performance proxy caching server for web clients, supporting
- FTP, gopher, ICY and HTTP data objects.
+ FTP, ICY and HTTP data objects.
+ .
+ This package provides Squid binaries supporting HTTPS features
+ without SSL-Bump (HTTPS interception).
 
 Package: eblocker-squid-common
 Architecture: all
@@ -49,6 +52,6 @@ Multi-Arch: foreign
 Depends: ${misc:Depends}, squid-langpack (>= 20110214-1)
 Description: Full featured Web Proxy cache (HTTP proxy) - common files
  Squid is a high-performance proxy caching server for web clients, supporting
- FTP, gopher, ICY and HTTP data objects.
+ FTP, ICY and HTTP data objects.
  .
  This package contains common files (MIB and icons)

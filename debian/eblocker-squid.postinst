@@ -47,15 +47,18 @@ case "$1" in
 		usr=`grepconf cache_effective_user proxy`
 		grp=`grepconf cache_effective_group proxy`
 
-		if [ "$(stat -c %U $cache_dir)" != "$usr" ] ||
-		   [ "$(stat -c %G $cache_dir)" != "$grp" ] ; then
-			chown $usr:$grp $cache_dir
-		fi
+		# Workaround for Bug 5388 - SMP: wrong output for -k parse cache_dir
+		if [ -d $cache_dir ] ; then
+			if [ "$(stat -c %U $cache_dir)" != "$usr" ] ||
+			[ "$(stat -c %G $cache_dir)" != "$grp" ] ; then
+				chown $usr:$grp $cache_dir
+			fi
 
-		if [ "$(stat -c %U $log_dir)" != "$usr" ] ||
-		   [ "$(stat -c %G $log_dir)" != "$grp" ] ; then
-			if [ "$(dpkg-statoverride --list $log_dir)" = "" ] ; then
-		  		chown $usr:$grp $log_dir
+			if [ "$(stat -c %U $log_dir)" != "$usr" ] ||
+			[ "$(stat -c %G $log_dir)" != "$grp" ] ; then
+				if [ "$(dpkg-statoverride --list $log_dir)" = "" ] ; then
+					chown $usr:$grp $log_dir
+				fi
 			fi
 		fi
 

@@ -1,3 +1,11 @@
+squid (6.12-1) unstable; urgency=high
+
+  Due to multiple security issues the ESI (Edge Side Includes) feature
+  has been disabled in this version of Squid. Upstream will be removing
+  the feature completely in upcoming releases.
+
+ -- Amos Jeffries <amosjeffries@squid-cache.org>  Mon, 28 Oct 2024 19:17:00 +1300
+
 squid (5.1-2) unstable; urgency=medium
 
   ext_session_acl and ext_time_quota_acl helpers have been switched from

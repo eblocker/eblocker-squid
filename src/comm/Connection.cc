@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -17,16 +17,16 @@
 #include "neighbors.h"
 #include "security/NegotiationHistory.h"
 #include "SquidConfig.h"
-#include "SquidTime.h"
+
 #include <ostream>
 
-InstanceIdDefinitions(Comm::Connection, "conn");
+InstanceIdDefinitions(Comm::Connection, "conn", uint64_t);
 
 class CachePeer;
 bool
 Comm::IsConnOpen(const Comm::ConnectionPointer &conn)
 {
-    return conn != NULL && conn->isOpen();
+    return conn != nullptr && conn->isOpen();
 }
 
 Comm::Connection::Connection() :
@@ -38,9 +38,7 @@ Comm::Connection::Connection() :
     peer_(nullptr),
     startTime_(squid_curtime),
     tlsHistory(nullptr)
-{
-    *rfc931 = 0; // quick init the head. the rest does not matter.
-}
+{}
 
 Comm::Connection::~Connection()
 {
@@ -81,7 +79,6 @@ Comm::Connection::cloneProfile() const
     c.nfConnmark = nfConnmark;
     // COMM_ORPHANED is not a part of connection opening instructions
     c.flags = flags & ~COMM_ORPHANED;
-    // rfc931 is excused
 
 #if USE_SQUID_EUI
     // These are currently only set when accepting connections and never used
@@ -126,7 +123,7 @@ Comm::Connection::getPeer() const
     if (cbdataReferenceValid(peer_))
         return peer_;
 
-    return NULL;
+    return nullptr;
 }
 
 void
@@ -165,7 +162,7 @@ Comm::Connection::connectTimeout(const time_t fwdStart) const
 {
     // a connection opening timeout (ignoring forwarding time limits for now)
     const CachePeer *peer = getPeer();
-    const time_t ctimeout = peer ? peerConnectTimeout(peer) : Config.Timeout.connect;
+    const auto ctimeout = peer ? peer->connectTimeout() : Config.Timeout.connect;
 
     // time we have left to finish the whole forwarding process
     const time_t fwdTimeLeft = FwdState::ForwardTimeout(fwdStart);
@@ -192,7 +189,7 @@ Comm::Connection::detailCodeContext(std::ostream &os) const
 }
 
 std::ostream &
-operator << (std::ostream &os, const Comm::Connection &conn)
+Comm::operator << (std::ostream &os, const Connection &conn)
 {
     os << conn.id;
     if (!conn.local.isNoAddr() || conn.local.port())
@@ -205,10 +202,6 @@ operator << (std::ostream &os, const Comm::Connection &conn)
         os << " FD " << conn.fd;
     if (conn.flags != COMM_UNSET)
         os << " flags=" << conn.flags;
-#if USE_IDENT
-    if (*conn.rfc931)
-        os << " IDENT::" << conn.rfc931;
-#endif
     return os;
 }
 

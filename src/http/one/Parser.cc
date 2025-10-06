@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -8,7 +8,7 @@
 
 #include "squid.h"
 #include "base/CharacterSet.h"
-#include "Debug.h"
+#include "debug/Stream.h"
 #include "http/one/Parser.h"
 #include "mime_header.h"
 #include "parser/Tokenizer.h"
@@ -27,7 +27,7 @@ void
 Http::One::Parser::clear()
 {
     parsingStage_ = HTTP_PARSE_NONE;
-    buf_ = NULL;
+    buf_ = nullptr;
     msgProtocol_ = AnyP::ProtocolVersion();
     mimeHeaderBlock_.clear();
 }
@@ -213,7 +213,7 @@ char *
 Http::One::Parser::getHostHeaderField()
 {
     if (!headerBlockSize())
-        return NULL;
+        return nullptr;
 
     LOCAL_ARRAY(char, header, GET_HDR_SZ);
     const char *name = "Host";
@@ -227,7 +227,7 @@ Http::One::Parser::getHostHeaderField()
 
     while (tok.prefix(p, LineCharacters())) {
         if (!tok.skipOne(CharacterSet::LF)) // move tokenizer past the LF
-            break; // error. reached invalid octet or end of buffer insted of an LF ??
+            break; // error. reached invalid octet or end of buffer instead of an LF ??
 
         // header lines must start with the name (case insensitive)
         if (p.substr(0, namelen).caseCmp(name, namelen))
@@ -262,7 +262,7 @@ Http::One::Parser::getHostHeaderField()
         return header;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 int
@@ -271,11 +271,12 @@ Http::One::ErrorLevel()
     return Config.onoff.relaxed_header_parser < 0 ? DBG_IMPORTANT : 5;
 }
 
-// BWS = *( SP / HTAB ) ; WhitespaceCharacters() may relax this RFC 7230 rule
-void
-Http::One::ParseBws(Parser::Tokenizer &tok)
+/// common part of ParseBws() and ParseStrctBws()
+namespace Http::One {
+static void
+ParseBws_(Parser::Tokenizer &tok, const CharacterSet &bwsChars)
 {
-    const auto count = tok.skipAll(Parser::WhitespaceCharacters());
+    const auto count = tok.skipAll(bwsChars);
 
     if (tok.atEnd())
         throw InsufficientInput(); // even if count is positive
@@ -289,5 +290,18 @@ Http::One::ParseBws(Parser::Tokenizer &tok)
     // else we successfully "parsed" an empty BWS sequence
 
     // success: no more BWS characters expected
+}
+} // namespace Http::One
+
+void
+Http::One::ParseBws(Parser::Tokenizer &tok)
+{
+    ParseBws_(tok, Parser::WhitespaceCharacters());
+}
+
+void
+Http::One::ParseStrictBws(Parser::Tokenizer &tok)
+{
+    ParseBws_(tok, CharacterSet::WSP);
 }
 

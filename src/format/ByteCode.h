@@ -1,13 +1,13 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
  * Please see the COPYING and CONTRIBUTORS files for details.
  */
 
-#ifndef _SQUID_FMT_BYTECODE_H
-#define _SQUID_FMT_BYTECODE_H
+#ifndef SQUID_SRC_FORMAT_BYTECODE_H
+#define SQUID_SRC_FORMAT_BYTECODE_H
 
 /*
  * Squid configuration allows users to define custom formats in
@@ -25,13 +25,15 @@ namespace Format
 {
 
 /*
- * Bytecodes for the configureable format stuff
+ * Bytecodes for the configurable format stuff
  */
 typedef enum {
     LFT_NONE,           /* dummy */
 
     /* arbitrary string between tokens */
     LFT_STRING,
+
+    LFT_BYTE,
 
     /* client TCP connection remote end details */
     LFT_CLIENT_IP_ADDRESS,
@@ -45,6 +47,8 @@ typedef enum {
     /*LFT_CLIENT_LOCAL_FQDN, (rDNS) */
     LFT_CLIENT_LOCAL_TOS,
     LFT_CLIENT_LOCAL_NFMARK,
+
+    LFT_TRANSPORT_CLIENT_CONNECTION_ID,
 
     LFT_CLIENT_HANDSHAKE,
 
@@ -65,7 +69,7 @@ typedef enum {
     LFT_SERVER_LOCAL_TOS,
     LFT_SERVER_LOCAL_NFMARK,
 
-    /* original Request-Line details recieved from client */
+    /* original Request-Line details received from client */
     LFT_CLIENT_REQ_METHOD,
     LFT_CLIENT_REQ_URI,
     LFT_CLIENT_REQ_URLSCHEME,
@@ -75,7 +79,7 @@ typedef enum {
     /* LFT_CLIENT_REQ_QUERY, */
     LFT_CLIENT_REQ_VERSION,
 
-    /* Request-Line details recieved from client (legacy, filtered) */
+    /* Request-Line details received from client (legacy, filtered) */
     LFT_REQUEST_METHOD,
     LFT_REQUEST_URI,
     LFT_REQUEST_URLPATH_OLD_31,
@@ -146,7 +150,6 @@ typedef enum {
     /* client credentials */
     LFT_USER_NAME,   /* any source will do */
     LFT_USER_LOGIN,
-    LFT_USER_IDENT,
     /*LFT_USER_REALM, */
     /*LFT_USER_SCHEME, */
     LFT_USER_EXTERNAL,
@@ -164,12 +167,14 @@ typedef enum {
     LFT_PEER_RESPONSE_TIME,
     LFT_TOTAL_SERVER_SIDE_RESPONSE_TIME,
     LFT_DNS_WAIT_TIME,
+    LFT_BUSY_TIME,
 
     /* Squid internal processing details */
     LFT_SQUID_STATUS,
     LFT_SQUID_ERROR,
     LFT_SQUID_ERROR_DETAIL,
     LFT_SQUID_HIERARCHY,
+    LFT_SQUID_REQUEST_ATTEMPTS,
 
     LFT_MIME_TYPE,
     LFT_TAG,
@@ -265,5 +270,5 @@ enum Quoting {
 
 } // namespace Format
 
-#endif /* _SQUID_FMT_BYTECODE_H */
+#endif /* SQUID_SRC_FORMAT_BYTECODE_H */
 

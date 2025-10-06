@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -14,11 +14,14 @@
 #include "acl/FilledChecklist.h"
 #include "acl/Gadgets.h"
 #include "anyp/PortCfg.h"
+#include "base/AsyncCallbacks.h"
+#include "base/AsyncCbdataCalls.h"
 #include "CacheManager.h"
 #include "CachePeer.h"
 #include "client_side.h"
 #include "clients/forward.h"
 #include "clients/HttpTunneler.h"
+#include "clients/WhoisGateway.h"
 #include "comm/Connection.h"
 #include "comm/ConnOpener.h"
 #include "comm/Loops.h"
@@ -29,7 +32,6 @@
 #include "fde.h"
 #include "FwdState.h"
 #include "globals.h"
-#include "gopher.h"
 #include "HappyConnOpener.h"
 #include "hier_code.h"
 #include "http.h"
@@ -50,12 +52,10 @@
 #include "ResolvedPeers.h"
 #include "security/BlindPeerConnector.h"
 #include "SquidConfig.h"
-#include "SquidTime.h"
 #include "ssl/PeekingPeerConnector.h"
 #include "Store.h"
 #include "StoreClient.h"
 #include "urn.h"
-#include "whois.h"
 #if USE_OPENSSL
 #include "ssl/cert_validate_message.h"
 #include "ssl/Config.h"
@@ -79,30 +79,6 @@ PconnPool *fwdPconnPool = new PconnPool("server-peers", nullptr);
 
 CBDATA_CLASS_INIT(FwdState);
 
-class FwdStatePeerAnswerDialer: public CallDialer, public Security::PeerConnector::CbDialer
-{
-public:
-    typedef void (FwdState::*Method)(Security::EncryptorAnswer &);
-
-    FwdStatePeerAnswerDialer(Method method, FwdState *fwd):
-        method_(method), fwd_(fwd), answer_() {}
-
-    /* CallDialer API */
-    virtual bool canDial(AsyncCall &call) { return fwd_.valid(); }
-    void dial(AsyncCall &call) { ((&(*fwd_))->*method_)(answer_); }
-    virtual void print(std::ostream &os) const {
-        os << '(' << fwd_.get() << ", " << answer_ << ')';
-    }
-
-    /* Security::PeerConnector::CbDialer API */
-    virtual Security::EncryptorAnswer &answer() { return answer_; }
-
-private:
-    Method method_;
-    CbcPointer<FwdState> fwd_;
-    Security::EncryptorAnswer answer_;
-};
-
 void
 FwdState::HandleStoreAbort(FwdState *fwd)
 {
@@ -111,7 +87,7 @@ FwdState::HandleStoreAbort(FwdState *fwd)
     if (Comm::IsConnOpen(fwd->serverConnection())) {
         fwd->closeServerConnection("store entry aborted");
     } else {
-        debugs(17, 7, HERE << "store entry aborted; no connection to close");
+        debugs(17, 7, "store entry aborted; no connection to close");
     }
     fwd->stopAndDestroy("store entry aborted");
 }
@@ -134,7 +110,7 @@ FwdState::closeServerConnection(const char *reason)
     debugs(17, 3, "because " << reason << "; " << serverConn);
     assert(Comm::IsConnOpen(serverConn));
     comm_remove_close_handler(serverConn->fd, closeHandler);
-    closeHandler = NULL;
+    closeHandler = nullptr;
     fwdPconnPool->noteUses(fd_table[serverConn->fd].pconn.uses);
     serverConn->close();
 }
@@ -145,14 +121,15 @@ FwdState::FwdState(const Comm::ConnectionPointer &client, StoreEntry * e, HttpRe
     entry(e),
     request(r),
     al(alp),
-    err(NULL),
+    err(nullptr),
     clientConn(client),
     start_t(squid_curtime),
     n_tries(0),
     waitingForDispatched(false),
     destinations(new ResolvedPeers()),
     pconnRace(raceImpossible),
-    storedWholeReply_(nullptr)
+    storedWholeReply_(nullptr),
+    peeringTimer(r)
 {
     debugs(17, 2, "Forwarding client request " << client << ", url=" << e->url());
     HTTPMSGLOCK(request);
@@ -210,6 +187,8 @@ FwdState::stopAndDestroy(const char *reason)
 
     cancelStep(reason);
 
+    peeringTimer.stop();
+
     PeerSelectionInitiator::subscribed = false; // may already be false
     self = nullptr; // we hope refcounting destroys us soon; may already be nil
     /* do not place any code here as this object may be gone by now */
@@ -249,7 +228,7 @@ FwdState::selectPeerForIntercepted()
     p->remote = clientConn->local;
     getOutgoingAddress(request, p);
 
-    debugs(17, 3, HERE << "using client original destination: " << *p);
+    debugs(17, 3, "using client original destination: " << *p);
     destinations->addPath(p);
     destinations->destinationsFinalized = true;
     PeerSelectionInitiator::subscribed = false;
@@ -264,8 +243,7 @@ FwdState::updateAleWithFinalError()
     if (!err || !al)
         return;
 
-    LogTagsErrors lte;
-    lte.timedout = (err->xerrno == ETIMEDOUT || err->type == ERR_READ_TIMEOUT);
+    const auto lte = LogTagsErrors::FromErrno(err->type == ERR_READ_TIMEOUT ? ETIMEDOUT : err->xerrno);
     al->cache.code.err.update(lte);
     if (!err->detail) {
         static const auto d = MakeNamedErrorDetail("WITH_SERVER");
@@ -278,16 +256,14 @@ void
 FwdState::completed()
 {
     if (flags.forward_completed) {
-        debugs(17, DBG_IMPORTANT, HERE << "FwdState::completed called on a completed request! Bad!");
+        debugs(17, DBG_IMPORTANT, "ERROR: FwdState::completed called on a completed request! Bad!");
         return;
     }
 
     flags.forward_completed = true;
 
-    request->hier.stopPeerClock(false);
-
     if (EBIT_TEST(entry->flags, ENTRY_ABORTED)) {
-        debugs(17, 3, HERE << "entry aborted");
+        debugs(17, 3, "entry aborted");
         return ;
     }
 
@@ -304,7 +280,7 @@ FwdState::completed()
             assert(err);
             updateAleWithFinalError();
             errorAppendEntry(entry, err);
-            err = NULL;
+            err = nullptr;
 #if USE_OPENSSL
             if (request->flags.sslPeek && request->clientConnectionManager.valid()) {
                 CallJobHere1(17, 4, request->clientConnectionManager, ConnStateData,
@@ -343,7 +319,7 @@ FwdState::~FwdState()
 
     entry->unlock("FwdState");
 
-    entry = NULL;
+    entry = nullptr;
 
     cancelStep("~FwdState");
 
@@ -367,21 +343,18 @@ FwdState::Start(const Comm::ConnectionPointer &clientConn, StoreEntry *entry, Ht
      * be allowed.  yuck, I know.
      */
 
-    if ( Config.accessList.miss && !request->client_addr.isNoAddr() &&
-            !request->flags.internal && request->url.getScheme() != AnyP::PROTO_CACHE_OBJECT) {
+    if ( Config.accessList.miss && !request->client_addr.isNoAddr() && !request->flags.internal) {
         /**
          * Check if this host is allowed to fetch MISSES from us (miss_access).
          * Intentionally replace the src_addr automatically selected by the checklist code
          * we do NOT want the indirect client address to be tested here.
          */
-        ACLFilledChecklist ch(Config.accessList.miss, request, NULL);
+        ACLFilledChecklist ch(Config.accessList.miss, request);
         ch.al = al;
         ch.src_addr = request->client_addr;
         ch.syncAle(request, nullptr);
         if (ch.fastCheck().denied()) {
-            err_type page_id;
-            page_id = aclGetDenyInfoPage(&Config.denyInfoList, AclMatchedName, 1);
-
+            auto page_id = FindDenyInfoPage(ch.currentAnswer(), true);
             if (page_id == ERR_NONE)
                 page_id = ERR_FORWARDING_DENIED;
 
@@ -391,7 +364,7 @@ FwdState::Start(const Comm::ConnectionPointer &clientConn, StoreEntry *entry, Ht
         }
     }
 
-    debugs(17, 3, HERE << "'" << entry->url() << "'");
+    debugs(17, 3, "'" << entry->url() << "'");
     /*
      * This seems like an odd place to bind mem_obj and request.
      * Might want to assert that request is NULL at this point
@@ -417,11 +390,6 @@ FwdState::Start(const Comm::ConnectionPointer &clientConn, StoreEntry *entry, Ht
 
     switch (request->url.getScheme()) {
 
-    case AnyP::PROTO_CACHE_OBJECT:
-        debugs(17, 2, "calling CacheManager due to request scheme " << request->url.getScheme());
-        CacheManager::GetInstance()->start(clientConn, request, entry, al);
-        return;
-
     case AnyP::PROTO_URN:
         urnStart(request, entry, al);
         return;
@@ -439,7 +407,7 @@ void
 FwdState::fwdStart(const Comm::ConnectionPointer &clientConn, StoreEntry *entry, HttpRequest *request)
 {
     // Hides AccessLogEntry.h from code that does not supply ALE anyway.
-    Start(clientConn, entry, request, NULL);
+    Start(clientConn, entry, request, nullptr);
 }
 
 /// subtracts time_t values, returning zero if smaller exceeds the larger value
@@ -476,7 +444,7 @@ FwdState::useDestinations()
             return; // expect a noteDestination*() call
         }
 
-        debugs(17, 3, HERE << "Connection failed: " << entry->url());
+        debugs(17, 3, "Connection failed: " << entry->url());
         if (!err) {
             const auto anErr = new ErrorState(ERR_CANNOT_FORWARD, Http::scInternalServerError, request, al);
             fail(anErr);
@@ -489,7 +457,7 @@ FwdState::useDestinations()
 void
 FwdState::fail(ErrorState * errorState)
 {
-    debugs(17, 3, err_type_str[errorState->type] << " \"" << Http::StatusCodeString(errorState->httpStatus) << "\"\n\t" << entry->url());
+    debugs(17, 3, errorState << "; was: " << err);
 
     delete err;
     err = errorState;
@@ -510,7 +478,7 @@ FwdState::reactToZeroSizeObject()
     assert(err->type == ERR_ZERO_SIZE_OBJECT);
 
     if (pconnRace == racePossible) {
-        debugs(17, 5, HERE << "pconn race happened");
+        debugs(17, 5, "pconn race happened");
         pconnRace = raceHappened;
         if (destinationReceipt) {
             destinations->reinstatePath(destinationReceipt);
@@ -530,12 +498,12 @@ FwdState::reactToZeroSizeObject()
 void
 FwdState::unregister(Comm::ConnectionPointer &conn)
 {
-    debugs(17, 3, HERE << entry->url() );
+    debugs(17, 3, entry->url() );
     assert(serverConnection() == conn);
     assert(Comm::IsConnOpen(conn));
     comm_remove_close_handler(conn->fd, closeHandler);
-    closeHandler = NULL;
-    serverConn = NULL;
+    closeHandler = nullptr;
+    serverConn = nullptr;
     destinationReceipt = nullptr;
 }
 
@@ -543,7 +511,7 @@ FwdState::unregister(Comm::ConnectionPointer &conn)
 void
 FwdState::unregister(int fd)
 {
-    debugs(17, 3, HERE << entry->url() );
+    debugs(17, 3, entry->url() );
     assert(fd == serverConnection()->fd);
     unregister(serverConn);
 }
@@ -678,7 +646,13 @@ FwdState::noteDestinationsEnd(ErrorState *selectionError)
     }
 
     // destinationsFound, but none of them worked, and we were waiting for more
-    assert(err);
+    debugs(17, 7, "no more destinations to try after " << n_tries << " failed attempts");
+    if (!err) {
+        const auto finalError = new ErrorState(ERR_CANNOT_FORWARD, Http::scBadGateway, request, al);
+        static const auto d = MakeNamedErrorDetail("REFORWARD_TO_NONE");
+        finalError->detailError(d);
+        fail(finalError);
+    } // else use actual error from last forwarding attempt
     stopAndDestroy("all found paths have failed");
 }
 
@@ -720,7 +694,7 @@ FwdState::checkRetry()
         return false;
 
     if (!self) { // we have aborted before the server called us back
-        debugs(17, 5, HERE << "not retrying because of earlier abort");
+        debugs(17, 5, "not retrying because of earlier abort");
         // we will be destroyed when the server clears its Pointer to us
         return false;
     }
@@ -763,7 +737,7 @@ FwdState::checkRetriable()
     // Optimize: A compliant proxy may retry PUTs, but Squid lacks the [rather
     // complicated] code required to protect the PUT request body from being
     // nibbled during the first try. Thus, Squid cannot retry some PUTs today.
-    if (request->body_pipe != NULL)
+    if (request->body_pipe != nullptr)
         return false;
 
     // RFC2616 9.1 Safe and Idempotent Methods
@@ -799,7 +773,7 @@ void
 FwdState::retryOrBail()
 {
     if (checkRetry()) {
-        debugs(17, 3, HERE << "re-forwarding (" << n_tries << " tries, " << (squid_curtime - start_t) << " secs)");
+        debugs(17, 3, "re-forwarding (" << n_tries << " tries, " << (squid_curtime - start_t) << " secs)");
         useDestinations();
         return;
     }
@@ -807,9 +781,7 @@ FwdState::retryOrBail()
     // TODO: should we call completed() here and move doneWithRetries there?
     doneWithRetries();
 
-    request->hier.stopPeerClock(false);
-
-    if (self != NULL && !err && shutting_down && entry->isEmpty()) {
+    if (self != nullptr && !err && shutting_down && entry->isEmpty()) {
         const auto anErr = new ErrorState(ERR_SHUTTING_DOWN, Http::scServiceUnavailable, request, al);
         errorAppendEntry(entry, anErr);
     }
@@ -823,7 +795,7 @@ FwdState::retryOrBail()
 void
 FwdState::doneWithRetries()
 {
-    if (request && request->body_pipe != NULL)
+    if (request && request->body_pipe != nullptr)
         request->body_pipe->expectNoConsumption();
 }
 
@@ -831,7 +803,7 @@ FwdState::doneWithRetries()
 void
 FwdState::handleUnregisteredServerEnd()
 {
-    debugs(17, 2, HERE << "self=" << self << " err=" << err << ' ' << entry->url());
+    debugs(17, 2, "self=" << self << " err=" << err << ' ' << entry->url());
     assert(!Comm::IsConnOpen(serverConn));
     serverConn = nullptr;
     destinationReceipt = nullptr;
@@ -871,8 +843,7 @@ FwdState::noteConnection(HappyConnOpener::Answer &answer)
 
     transportWait.finish();
 
-    Must(n_tries <= answer.n_tries); // n_tries cannot decrease
-    n_tries = answer.n_tries;
+    updateAttempts(answer.n_tries);
 
     ErrorState *error = nullptr;
     if ((error = answer.error.get())) {
@@ -936,9 +907,7 @@ FwdState::noteConnection(HappyConnOpener::Answer &answer)
 void
 FwdState::establishTunnelThruProxy(const Comm::ConnectionPointer &conn)
 {
-    AsyncCall::Pointer callback = asyncCall(17,4,
-                                            "FwdState::tunnelEstablishmentDone",
-                                            Http::Tunneler::CbDialer<FwdState>(&FwdState::tunnelEstablishmentDone, this));
+    const auto callback = asyncCallback(17, 4, FwdState::tunnelEstablishmentDone, this);
     HttpRequest::Pointer requestPointer = request;
     const auto tunneler = new Http::Tunneler(conn, requestPointer, callback, connectingTimeout(conn), al);
 
@@ -1027,9 +996,7 @@ void
 FwdState::secureConnectionToPeer(const Comm::ConnectionPointer &conn)
 {
     HttpRequest::Pointer requestPointer = request;
-    AsyncCall::Pointer callback = asyncCall(17,4,
-                                            "FwdState::ConnectedToPeer",
-                                            FwdStatePeerAnswerDialer(&FwdState::connectedToPeer, this));
+    const auto callback = asyncCallback(17, 4, FwdState::connectedToPeer, this);
     const auto sslNegotiationTimeout = connectingTimeout(conn);
     Security::PeerConnector *connector = nullptr;
 #if USE_OPENSSL
@@ -1088,8 +1055,7 @@ FwdState::successfullyConnectedToPeer(const Comm::ConnectionPointer &conn)
     CallJobHere1(17, 4, request->clientConnectionManager, ConnStateData,
                  ConnStateData::notePeerConnection, serverConnection());
 
-    if (serverConnection()->getPeer())
-        peerConnectSucceded(serverConnection()->getPeer());
+    NoteOutgoingConnectionSuccess(serverConnection()->getPeer());
 
     dispatch();
 }
@@ -1124,6 +1090,22 @@ FwdState::syncHierNote(const Comm::ConnectionPointer &server, const char *host)
         al->hier.resetPeerNotes(server, host);
 }
 
+/// sets n_tries to the given value (while keeping ALE, if any, in sync)
+void
+FwdState::updateAttempts(const int newValue)
+{
+    Assure(n_tries <= newValue); // n_tries cannot decrease
+
+    // Squid probably creates at most one FwdState/TunnelStateData object per
+    // ALE, but, unlike an assignment would, this increment logic works even if
+    // Squid uses multiple such objects for a given ALE in some esoteric cases.
+    if (al)
+        al->requestAttempts += (newValue - n_tries);
+
+    n_tries = newValue;
+    debugs(17, 5, n_tries);
+}
+
 /**
  * Called after forwarding path selection (via peer select) has taken place
  * and whenever forwarding needs to attempt a new connection (routing failover).
@@ -1145,16 +1127,13 @@ FwdState::connectStart()
     err = nullptr;
     request->clearError();
 
-    request->hier.startPeerClock();
-
-    AsyncCall::Pointer callback = asyncCall(17, 5, "FwdState::noteConnection", HappyConnOpener::CbDialer<FwdState>(&FwdState::noteConnection, this));
-
+    const auto callback = asyncCallback(17, 5, FwdState::noteConnection, this);
     HttpRequest::Pointer cause = request;
     const auto cs = new HappyConnOpener(destinations, callback, cause, start_t, n_tries, al);
     cs->setHost(request->url.host());
     bool retriable = checkRetriable();
     if (!retriable && Config.accessList.serverPconnForNonretriable) {
-        ACLFilledChecklist ch(Config.accessList.serverPconnForNonretriable, request, nullptr);
+        ACLFilledChecklist ch(Config.accessList.serverPconnForNonretriable, request);
         ch.al = al;
         ch.syncAle(request, nullptr);
         retriable = ch.fastCheck().allowed();
@@ -1188,7 +1167,8 @@ FwdState::usePinned()
         return;
     }
 
-    ++n_tries;
+    updateAttempts(n_tries + 1);
+
     request->flags.pinned = true;
 
     assert(connManager);
@@ -1285,18 +1265,12 @@ FwdState::dispatch()
             httpStart(this);
             break;
 
-        case AnyP::PROTO_GOPHER:
-            gopherStart(this);
-            break;
-
         case AnyP::PROTO_FTP:
             if (request->flags.ftpNative)
                 Ftp::StartRelay(this);
             else
                 Ftp::StartGateway(this);
             break;
-
-        case AnyP::PROTO_CACHE_OBJECT:
 
         case AnyP::PROTO_URN:
             fatal_dump("Should never get here");
@@ -1336,7 +1310,7 @@ FwdState::reforward()
     StoreEntry *e = entry;
 
     if (EBIT_TEST(e->flags, ENTRY_ABORTED)) {
-        debugs(17, 3, HERE << "entry aborted");
+        debugs(17, 3, "entry aborted");
         return 0;
     }
 
@@ -1347,7 +1321,7 @@ FwdState::reforward()
     e->mem_obj->checkUrlChecksum();
 #endif
 
-    debugs(17, 3, HERE << e->url() << "?" );
+    debugs(17, 3, e->url() << "?" );
 
     if (request->flags.pinned && !pinnedCanRetry()) {
         debugs(17, 3, "pinned connection; cannot retry");
@@ -1355,7 +1329,7 @@ FwdState::reforward()
     }
 
     if (!EBIT_TEST(e->flags, ENTRY_FWD_HDR_WAIT)) {
-        debugs(17, 3, HERE << "No, ENTRY_FWD_HDR_WAIT isn't set");
+        debugs(17, 3, "No, ENTRY_FWD_HDR_WAIT isn't set");
         return 0;
     }
 
@@ -1366,15 +1340,17 @@ FwdState::reforward()
         return 0;
 
     if (destinations->empty() && !PeerSelectionInitiator::subscribed) {
-        debugs(17, 3, HERE << "No alternative forwarding paths left");
+        debugs(17, 3, "No alternative forwarding paths left");
         return 0;
     }
 
     const auto s = entry->mem().baseReply().sline.status();
-    debugs(17, 3, HERE << "status " << s);
-    return reforwardableStatus(s);
+    debugs(17, 3, "status " << s);
+    return Http::IsReforwardableStatus(s);
 }
 
+// TODO: Refactor to fix multiple mgr:forward accounting/reporting bugs. See
+// https://lists.squid-cache.org/pipermail/squid-users/2024-December/027331.html
 static void
 fwdStats(StoreEntry * s)
 {
@@ -1382,19 +1358,25 @@ fwdStats(StoreEntry * s)
     int j;
     storeAppendPrintf(s, "Status");
 
-    for (j = 1; j < MAX_FWD_STATS_IDX; ++j) {
+    // XXX: Missing try#0 heading for FwdReplyCodes[0][i]
+    for (j = 1; j <= MAX_FWD_STATS_IDX; ++j) {
         storeAppendPrintf(s, "\ttry#%d", j);
     }
 
     storeAppendPrintf(s, "\n");
 
     for (i = 0; i <= (int) Http::scInvalidHeader; ++i) {
-        if (FwdReplyCodes[0][i] == 0)
+        // XXX: Missing reporting of status codes for which logReplyStatus() was
+        // only called with n_tries exceeding 1. To be more precise, we are
+        // missing (the equivalent of) logReplyStatus() calls for attempts done
+        // outside of FwdState. Relying on n_tries<=1 counters is too fragile.
+        if (!FwdReplyCodes[0][i] && !FwdReplyCodes[1][i])
             continue;
 
         storeAppendPrintf(s, "%3d", i);
 
-        for (j = 0; j <= MAX_FWD_STATS_IDX; ++j) {
+        // XXX: Missing FwdReplyCodes[0][i] reporting
+        for (j = 1; j <= MAX_FWD_STATS_IDX; ++j) {
             storeAppendPrintf(s, "\t%d", FwdReplyCodes[j][i]);
         }
 
@@ -1403,32 +1385,6 @@ fwdStats(StoreEntry * s)
 }
 
 /**** STATIC MEMBER FUNCTIONS *************************************************/
-
-bool
-FwdState::reforwardableStatus(const Http::StatusCode s) const
-{
-    switch (s) {
-
-    case Http::scBadGateway:
-
-    case Http::scGatewayTimeout:
-        return true;
-
-    case Http::scForbidden:
-
-    case Http::scInternalServerError:
-
-    case Http::scNotImplemented:
-
-    case Http::scServiceUnavailable:
-        return Config.retry.onerror;
-
-    default:
-        return false;
-    }
-
-    /* NOTREACHED */
-}
 
 void
 FwdState::initModule()
@@ -1553,8 +1509,8 @@ getOutgoingAddress(HttpRequest * request, const Comm::ConnectionPointer &conn)
         return; // anything will do.
     }
 
-    ACLFilledChecklist ch(NULL, request, NULL);
-    ch.dst_peer_name = conn->getPeer() ? conn->getPeer()->name : NULL;
+    ACLFilledChecklist ch(nullptr, request);
+    ch.dst_peer_name = conn->getPeer() ? conn->getPeer()->name : nullptr;
     ch.dst_addr = conn->remote;
 
     // TODO use the connection details in ACL.
@@ -1580,7 +1536,7 @@ GetTosToServer(HttpRequest * request, Comm::Connection &conn)
     if (!Ip::Qos::TheConfig.tosToServer)
         return 0;
 
-    ACLFilledChecklist ch(NULL, request, NULL);
+    ACLFilledChecklist ch(nullptr, request);
     ch.dst_peer_name = conn.getPeer() ? conn.getPeer()->name : nullptr;
     ch.dst_addr = conn.remote;
     return aclMapTOS(Ip::Qos::TheConfig.tosToServer, &ch);
@@ -1593,7 +1549,7 @@ GetNfmarkToServer(HttpRequest * request, Comm::Connection &conn)
     if (!Ip::Qos::TheConfig.nfmarkToServer)
         return 0;
 
-    ACLFilledChecklist ch(NULL, request, NULL);
+    ACLFilledChecklist ch(nullptr, request);
     ch.dst_peer_name = conn.getPeer() ? conn.getPeer()->name : nullptr;
     ch.dst_addr = conn.remote;
     const auto mc = aclFindNfMarkConfig(Ip::Qos::TheConfig.nfmarkToServer, &ch);
@@ -1619,5 +1575,27 @@ ResetMarkingsToServer(HttpRequest * request, Comm::Connection &conn)
         Ip::Qos::setSockTos(&conn, conn.tos);
     if (conn.nfmark)
         Ip::Qos::setSockNfmark(&conn, conn.nfmark);
+}
+
+/* PeeringActivityTimer */
+
+// The simple methods below are not inlined to avoid exposing some of the
+// current FwdState.h users to a full HttpRequest definition they do not need.
+
+PeeringActivityTimer::PeeringActivityTimer(const HttpRequestPointer &r): request(r)
+{
+    Assure(request);
+    timer().resume();
+}
+
+PeeringActivityTimer::~PeeringActivityTimer()
+{
+    stop();
+}
+
+Stopwatch &
+PeeringActivityTimer::timer()
+{
+    return request->hier.totalPeeringTime;
 }
 

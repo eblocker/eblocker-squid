@@ -1,13 +1,13 @@
 #!/usr/bin/perl -w
 #
-## Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+## Copyright (C) 1996-2025 The Squid Software Foundation and contributors
 ##
 ## Squid software is distributed under GPLv2+ license and includes
 ## contributions from numerous individuals and organizations.
 ## Please see the COPYING and CONTRIBUTORS files for details.
 ##
 
-# Reads cache.log from STDIN, preferrably with full debugging enabled.
+# Reads cache.log from STDIN, preferably with full debugging enabled.
 # Finds creation and destruction messages for a given class.
 # At the end, reports log lines that correspond to still-alive objects.
 # Also reports the number of objects found (total and still-alive).
@@ -75,8 +75,8 @@ my %Pairs = (
 if (!$Pairs{$Thing}) {
     warn("guessing construction/destruction pattern for $Thing\n");
     $Pairs{$Thing} = [
-        "\\b$Thing construct.*, this=(\\S+)",
-        "\\b$Thing destruct.*, this=(\\S+)",
+        "\\b${Thing}:? construct.*, this=(\\S+)",
+        "\\b${Thing}:? destruct.*, this=(\\S+)",
         ];
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -21,10 +21,31 @@
 #include "ssl/bio.h"
 #include "ssl/PeekingPeerConnector.h"
 #include "ssl/ServerBump.h"
+#include "tunnel.h"
 
 CBDATA_NAMESPACED_CLASS_INIT(Ssl, PeekingPeerConnector);
 
-void switchToTunnel(HttpRequest *request, const Comm::ConnectionPointer &clientConn, const Comm::ConnectionPointer &srvConn, const SBuf &preReadServerData);
+Ssl::PeekingPeerConnector::PeekingPeerConnector(HttpRequestPointer &aRequest,
+        const Comm::ConnectionPointer &aServerConn,
+        const Comm::ConnectionPointer &aClientConn,
+        const AsyncCallback<Security::EncryptorAnswer> &aCallback,
+        const AccessLogEntryPointer &alp,
+        const time_t timeout):
+    AsyncJob("Ssl::PeekingPeerConnector"),
+    Security::PeerConnector(aServerConn, aCallback, alp, timeout),
+    clientConn(aClientConn),
+    splice(false),
+    serverCertificateHandled(false)
+{
+    request = aRequest;
+
+    if (const auto csd = request->clientConnectionManager.valid()) {
+        const auto serverBump = csd->serverBump();
+        Must(serverBump);
+        Must(serverBump->at(XactionStep::tlsBump3));
+    }
+    // else the client is gone, and we cannot check the step, but must carry on
+}
 
 void
 Ssl::PeekingPeerConnector::cbCheckForPeekAndSpliceDone(const Acl::Answer aclAnswer, void *data)
@@ -46,18 +67,9 @@ Ssl::PeekingPeerConnector::checkForPeekAndSpliceDone(const Acl::Answer aclAnswer
 void
 Ssl::PeekingPeerConnector::checkForPeekAndSplice()
 {
-    // Mark Step3 of bumping
-    if (request->clientConnectionManager.valid()) {
-        if (Ssl::ServerBump *serverBump = request->clientConnectionManager->serverBump()) {
-            serverBump->step = XactionStep::tlsBump3;
-        }
-    }
-
     handleServerCertificate();
 
-    ACLFilledChecklist *acl_checklist = new ACLFilledChecklist(
-        ::Config.accessList.ssl_bump,
-        request.getRaw(), NULL);
+    auto acl_checklist = ACLFilledChecklist::Make(::Config.accessList.ssl_bump, request.getRaw());
     acl_checklist->al = al;
     acl_checklist->banAction(Acl::Answer(ACCESS_ALLOWED, Ssl::bumpNone));
     acl_checklist->banAction(Acl::Answer(ACCESS_ALLOWED, Ssl::bumpPeek));
@@ -72,7 +84,7 @@ Ssl::PeekingPeerConnector::checkForPeekAndSplice()
     if (!srvBio->canBump())
         acl_checklist->banAction(Acl::Answer(ACCESS_ALLOWED, Ssl::bumpBump));
     acl_checklist->syncAle(request.getRaw(), nullptr);
-    acl_checklist->nonBlockingCheck(Ssl::PeekingPeerConnector::cbCheckForPeekAndSpliceDone, this);
+    ACLFilledChecklist::NonBlockingCheck(std::move(acl_checklist), Ssl::PeekingPeerConnector::cbCheckForPeekAndSpliceDone, this);
 }
 
 void
@@ -128,10 +140,10 @@ Ssl::PeekingPeerConnector::checkForPeekAndSpliceGuess() const
     return Ssl::bumpSplice;
 }
 
-Security::ContextPointer
-Ssl::PeekingPeerConnector::getTlsContext()
+Security::FuturePeerContext *
+Ssl::PeekingPeerConnector::peerContext() const
 {
-    return ::Config.ssl_client.sslContext;
+    return ::Config.ssl_client.defaultPeerContext;
 }
 
 bool
@@ -147,7 +159,7 @@ Ssl::PeekingPeerConnector::initialize(Security::SessionPointer &serverSession)
 
     if (ConnStateData *csd = request->clientConnectionManager.valid()) {
 
-        SBuf *hostName = NULL;
+        SBuf *hostName = nullptr;
 
         //Enable Status_request TLS extension, required to bump some clients
         SSL_set_tlsext_status_type(serverSession.get(), TLSEXT_STATUSTYPE_ocsp);
@@ -168,7 +180,6 @@ Ssl::PeekingPeerConnector::initialize(Security::SessionPointer &serverSession)
         if (hostName)
             SSL_set_ex_data(serverSession.get(), ssl_ex_index_server, (void*)hostName);
 
-        Must(!csd->serverBump() || csd->serverBump()->at(XactionStep::tlsBump1, XactionStep::tlsBump2));
         if (csd->sslBumpMode == Ssl::bumpPeek || csd->sslBumpMode == Ssl::bumpStare) {
             auto clientSession = fd_table[clientConn->fd].ssl.get();
             Must(clientSession);
@@ -186,9 +197,6 @@ Ssl::PeekingPeerConnector::initialize(Security::SessionPointer &serverSession)
             srvBio->recordInput(true);
             srvBio->mode(csd->sslBumpMode);
         } else {
-            // Set client SSL options
-            ::Security::ProxyOutgoingConfig.updateSessionOptions(serverSession);
-
             const bool redirected = request->flags.redirected && ::Config.onoff.redir_rewrites_host;
             const char *sniServer = (!hostName || redirected) ?
                                     request->url.host() :

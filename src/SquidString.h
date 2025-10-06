@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -8,11 +8,11 @@
 
 /* DEBUG: section 67    String */
 
-#ifndef SQUID_STRING_H
-#define SQUID_STRING_H
+#ifndef SQUID_SRC_SQUIDSTRING_H
+#define SQUID_SRC_SQUIDSTRING_H
 
 #include "base/TextException.h"
-#include "Debug.h"
+#include "debug/Stream.h"
 
 #include <ostream>
 
@@ -26,7 +26,7 @@ class String
 {
 
 public:
-    String();
+    String() = default;
     String(char const *);
     String(String const &);
     String(String && S) : size_(S.size_), len_(S.len_), buf_(S.buf_) {
@@ -132,7 +132,7 @@ private:
     void allocBuffer(size_type sz);
     void setBuffer(char *buf, size_type sz);
 
-    bool defined() const {return buf_!=NULL;}
+    bool defined() const {return buf_!=nullptr;}
     bool undefined() const {return !defined();}
 
     /* never reference these directly! */
@@ -185,5 +185,5 @@ int stringHasWhitespace(const char *);
 int stringHasCntl(const char *);
 char *strwordtok(char *buf, char **t);
 
-#endif /* SQUID_STRING_H */
+#endif /* SQUID_SRC_SQUIDSTRING_H */
 

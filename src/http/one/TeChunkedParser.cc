@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1996-2022 The Squid Software Foundation and contributors
+ * Copyright (C) 1996-2025 The Squid Software Foundation and contributors
  *
  * Squid software is distributed under GPLv2+ license and includes
  * contributions from numerous individuals and organizations.
@@ -8,7 +8,7 @@
 
 #include "squid.h"
 #include "base/TextException.h"
-#include "Debug.h"
+#include "debug/Stream.h"
 #include "http/one/TeChunkedParser.h"
 #include "http/one/Tokenizer.h"
 #include "http/ProtocolVersion.h"
@@ -33,7 +33,7 @@ Http::One::TeChunkedParser::clear()
     parsingStage_ = Http1::HTTP_PARSE_NONE;
     buf_.clear();
     theChunkSize = theLeftBodySize = 0;
-    theOut = NULL;
+    theOut = nullptr;
     // XXX: We do not reset customExtensionValueParser here. Based on the
     // clear() API description, we must, but it makes little sense and could
     // break method callers if they appear because some of them may forget to
@@ -125,6 +125,10 @@ Http::One::TeChunkedParser::parseChunkMetadataSuffix(Tokenizer &tok)
     // Code becomes much simpler when incremental parsing functions throw on
     // bad or insufficient input, like in the code below. TODO: Expand up.
     try {
+        // Bug 4492: IBM_HTTP_Server sends SP after chunk-size.
+        // No ParseBws() here because it may consume CR required further below.
+        ParseStrictBws(tok);
+
         parseChunkExtensions(tok); // a possibly empty chunk-ext list
         tok.skipRequired("CRLF after [chunk-ext]", Http1::CrLf());
         buf_ = tok.remaining();
@@ -145,7 +149,7 @@ Http::One::TeChunkedParser::parseChunkExtensions(Tokenizer &callerTok)
     do {
         auto tok = callerTok;
 
-        ParseBws(tok); // Bug 4492: IBM_HTTP_Server sends SP after chunk-size
+        ParseBws(tok);
 
         if (!tok.skip(';'))
             return; // reached the end of extensions (if any)
