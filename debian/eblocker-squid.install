@@ -5,7 +5,7 @@ etc/logrotate.d
 etc/resolvconf
 etc/ufw
 usr/lib/squid
-usr/sbin/squid-gnutls
+usr/sbin/squid
 usr/share/man/man8/basic_db_auth.8
 usr/share/man/man8/basic_getpwnam_auth.8
 usr/share/man/man8/basic_ldap_auth.8
