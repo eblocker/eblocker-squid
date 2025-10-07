@@ -10,6 +10,7 @@
 
 #include "squid.h"
 #include "acl/FilledChecklist.h"
+#include "client_side.h"
 #include "base/AsyncCallbacks.h"
 #include "base/IoManip.h"
 #include "CachePeer.h"
