@@ -586,7 +586,7 @@ static bool buildCertificate(Security::CertPointer & cert, Ssl::CertificatePrope
     ASN1_TIME *aTime = nullptr;
     if (!properties.setValidBefore && properties.mimicCert.get())
         aTime = X509_getm_notBefore(properties.mimicCert.get());
-    if (!aTime && properties.signWithX509.get())
+    if (!aTime && properties.setValidBefore && properties.signWithX509.get())
         aTime = X509_getm_notBefore(properties.signWithX509.get());
 
     if (aTime) {
@@ -598,12 +598,13 @@ static bool buildCertificate(Security::CertPointer & cert, Ssl::CertificatePrope
     aTime = nullptr;
     if (!properties.setValidAfter && properties.mimicCert.get())
         aTime = X509_getm_notAfter(properties.mimicCert.get());
-    if (!aTime && properties.signWithX509.get())
+    if (!aTime && properties.setValidAfter && properties.signWithX509.get())
         aTime = X509_getm_notAfter(properties.signWithX509.get());
+
     if (aTime) {
         if (!X509_set1_notAfter(cert.get(), aTime))
             return false;
-    } else if (!X509_gmtime_adj(X509_getm_notAfter(cert.get()), 60*60*24*365*3))
+    } else if (!X509_gmtime_adj(X509_getm_notAfter(cert.get()), 44*24*60*60))
         return false;
 
     int addedExtensions = 0;
