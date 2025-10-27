@@ -1,3 +1,9 @@
+squid (7.1-1+eblocker1) unstable; urgency=medium
+
+  * Reduce lifetime of certificate to 46 days if origin server certificate is unkown.
+
+ -- eBlocker Open Source <dev@eblocker.org>  Mon, 27 Oct 2025 17:20:00 +0100
+
 squid (7.1-1) unstable; urgency=high
 
   [ Amos Jeffries <amosjeffries@squid-cache.org> ]
