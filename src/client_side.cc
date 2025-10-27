@@ -2283,7 +2283,7 @@ static std::string eblocker_pem(ConnStateData* conn) {
     return eblocker::pem(x509);
 }
 
-static void eblocker_log(ConnStateData* conn, ErrorDetailPointer errorDetail, const char* desc) {
+static void eblocker_log(ConnStateData* conn, const ErrorDetailPointer &errorDetail, const char* desc) {
     SBuf clientSni = conn->tlsClientSni();
     debugs(83, DBG_IMPORTANT, "eblkr: "
            << errorDetail << ":" << desc
