@@ -22,7 +22,8 @@ Build-Depends: ed
 	, libecap3-dev (>= 1.0.1-2)
 	, libexpat1-dev
 	, libgnutls28-dev (>= 3.5)
-	, libkrb5-dev, comerr-dev
+	, libkrb5-dev | krb5-multidev
+	, comerr-dev
 	, libldap2-dev
 	, libnetfilter-conntrack-dev [linux-any]
 	, libpam0g-dev
