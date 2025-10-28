@@ -510,8 +510,8 @@ am__tests_testCacheManager_SOURCES_DIST = BandwidthBucket.cc \
 	HttpHdrScTarget.cc HttpHeader.cc HttpHeader.h \
 	HttpHeaderFieldStat.h HttpHeaderTools.cc HttpHeaderTools.h \
 	HttpReply.cc HttpRequest.cc \
-	tests/stub_HttpUpgradeProtocolAccess.cc IoStats.h \
-	tests/stub_IpcIoFile.cc LogTags.cc MasterXaction.cc \
+	tests/stub_HttpUpgradeProtocolAccess.cc tests/stub_Instance.cc \
+	IoStats.h tests/stub_IpcIoFile.cc LogTags.cc MasterXaction.cc \
 	MasterXaction.h MemBuf.cc MemObject.cc MemStore.cc Notes.cc \
 	Notes.h Parsing.cc PeerPoolMgr.cc PeerPoolMgr.h Pipeline.cc \
 	Pipeline.h RefreshPattern.h RemovalPolicy.cc RequestFlags.cc \
@@ -562,10 +562,10 @@ am_tests_testCacheManager_OBJECTS = $(am__objects_3) $(am__objects_4) \
 	HttpHeaderTools.$(OBJEXT) HttpReply.$(OBJEXT) \
 	HttpRequest.$(OBJEXT) \
 	tests/stub_HttpUpgradeProtocolAccess.$(OBJEXT) \
-	tests/stub_IpcIoFile.$(OBJEXT) LogTags.$(OBJEXT) \
-	MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
-	MemStore.$(OBJEXT) Notes.$(OBJEXT) Parsing.$(OBJEXT) \
-	PeerPoolMgr.$(OBJEXT) Pipeline.$(OBJEXT) \
+	tests/stub_Instance.$(OBJEXT) tests/stub_IpcIoFile.$(OBJEXT) \
+	LogTags.$(OBJEXT) MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) \
+	MemObject.$(OBJEXT) MemStore.$(OBJEXT) Notes.$(OBJEXT) \
+	Parsing.$(OBJEXT) PeerPoolMgr.$(OBJEXT) Pipeline.$(OBJEXT) \
 	RemovalPolicy.$(OBJEXT) RequestFlags.$(OBJEXT) \
 	ResolvedPeers.$(OBJEXT) SquidMath.$(OBJEXT) \
 	StatCounters.$(OBJEXT) tests/stub_StatHist.$(OBJEXT) \
@@ -682,10 +682,10 @@ am__tests_testDiskIO_SOURCES_DIST = BandwidthBucket.cc \
 	HttpHdrCc.cc HttpHdrCc.h HttpHdrContRange.cc HttpHdrRange.cc \
 	HttpHdrSc.cc HttpHdrScTarget.cc HttpHeader.cc HttpHeader.h \
 	HttpHeaderFieldStat.h HttpHeaderTools.cc HttpHeaderTools.h \
-	HttpReply.cc tests/stub_HttpRequest.cc LogTags.cc \
-	MasterXaction.cc MasterXaction.h MemBuf.cc MemObject.cc \
-	tests/stub_MemStore.cc Notes.cc Notes.h Parsing.cc \
-	tests/stub_Port.cc RemovalPolicy.cc RequestFlags.cc \
+	HttpReply.cc tests/stub_HttpRequest.cc tests/stub_Instance.cc \
+	LogTags.cc MasterXaction.cc MasterXaction.h MemBuf.cc \
+	MemObject.cc tests/stub_MemStore.cc Notes.cc Notes.h \
+	Parsing.cc tests/stub_Port.cc RemovalPolicy.cc RequestFlags.cc \
 	RequestFlags.h ResolvedPeers.cc ResolvedPeers.h \
 	StatCounters.cc StatCounters.h tests/stub_StatHist.cc \
 	StatHist.h StoreFileSystem.cc StoreIOState.cc \
@@ -726,10 +726,10 @@ am_tests_testDiskIO_OBJECTS = $(am__objects_3) $(am__objects_10) \
 	HttpHdrRange.$(OBJEXT) HttpHdrSc.$(OBJEXT) \
 	HttpHdrScTarget.$(OBJEXT) HttpHeader.$(OBJEXT) \
 	HttpHeaderTools.$(OBJEXT) HttpReply.$(OBJEXT) \
-	tests/stub_HttpRequest.$(OBJEXT) LogTags.$(OBJEXT) \
-	MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
-	tests/stub_MemStore.$(OBJEXT) Notes.$(OBJEXT) \
-	Parsing.$(OBJEXT) tests/stub_Port.$(OBJEXT) \
+	tests/stub_HttpRequest.$(OBJEXT) tests/stub_Instance.$(OBJEXT) \
+	LogTags.$(OBJEXT) MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) \
+	MemObject.$(OBJEXT) tests/stub_MemStore.$(OBJEXT) \
+	Notes.$(OBJEXT) Parsing.$(OBJEXT) tests/stub_Port.$(OBJEXT) \
 	RemovalPolicy.$(OBJEXT) RequestFlags.$(OBJEXT) \
 	ResolvedPeers.$(OBJEXT) StatCounters.$(OBJEXT) \
 	tests/stub_StatHist.$(OBJEXT) StoreFileSystem.$(OBJEXT) \
@@ -893,8 +893,8 @@ am__tests_testHttpRange_SOURCES_DIST = BandwidthBucket.cc \
 	HttpHdrScTarget.cc HttpHeader.cc HttpHeader.h \
 	HttpHeaderFieldStat.h HttpHeaderTools.cc HttpHeaderTools.h \
 	tests/testHttpRange.cc HttpReply.cc HttpRequest.cc \
-	tests/stub_HttpUpgradeProtocolAccess.cc IoStats.h \
-	tests/stub_IpcIoFile.cc LogTags.cc MasterXaction.cc \
+	tests/stub_HttpUpgradeProtocolAccess.cc tests/stub_Instance.cc \
+	IoStats.h tests/stub_IpcIoFile.cc LogTags.cc MasterXaction.cc \
 	MasterXaction.h MemBuf.cc MemObject.cc tests/stub_MemStore.cc \
 	Notes.cc Notes.h Parsing.cc PeerPoolMgr.cc PeerPoolMgr.h \
 	Pipeline.cc Pipeline.h RefreshPattern.h RemovalPolicy.cc \
@@ -947,13 +947,13 @@ am_tests_testHttpRange_OBJECTS = $(am__objects_3) $(am__objects_4) \
 	tests/testHttpRange.$(OBJEXT) HttpReply.$(OBJEXT) \
 	HttpRequest.$(OBJEXT) \
 	tests/stub_HttpUpgradeProtocolAccess.$(OBJEXT) \
-	tests/stub_IpcIoFile.$(OBJEXT) LogTags.$(OBJEXT) \
-	MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
-	tests/stub_MemStore.$(OBJEXT) Notes.$(OBJEXT) \
-	Parsing.$(OBJEXT) PeerPoolMgr.$(OBJEXT) Pipeline.$(OBJEXT) \
-	RemovalPolicy.$(OBJEXT) RequestFlags.$(OBJEXT) \
-	ResolvedPeers.$(OBJEXT) SquidMath.$(OBJEXT) \
-	StatCounters.$(OBJEXT) StatHist.$(OBJEXT) \
+	tests/stub_Instance.$(OBJEXT) tests/stub_IpcIoFile.$(OBJEXT) \
+	LogTags.$(OBJEXT) MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) \
+	MemObject.$(OBJEXT) tests/stub_MemStore.$(OBJEXT) \
+	Notes.$(OBJEXT) Parsing.$(OBJEXT) PeerPoolMgr.$(OBJEXT) \
+	Pipeline.$(OBJEXT) RemovalPolicy.$(OBJEXT) \
+	RequestFlags.$(OBJEXT) ResolvedPeers.$(OBJEXT) \
+	SquidMath.$(OBJEXT) StatCounters.$(OBJEXT) StatHist.$(OBJEXT) \
 	StoreFileSystem.$(OBJEXT) StoreIOState.$(OBJEXT) \
 	StoreSwapLogData.$(OBJEXT) StrList.$(OBJEXT) String.$(OBJEXT) \
 	Transients.$(OBJEXT) tests/stub_cache_cf.$(OBJEXT) \
@@ -1020,11 +1020,11 @@ am_tests_testHttpReply_OBJECTS = tests/stub_CachePeer.$(OBJEXT) \
 	HttpHdrSc.$(OBJEXT) HttpHdrScTarget.$(OBJEXT) \
 	HttpHeader.$(OBJEXT) HttpHeaderTools.$(OBJEXT) \
 	HttpReply.$(OBJEXT) tests/testHttpReply.$(OBJEXT) \
-	tests/stub_HttpRequest.$(OBJEXT) MasterXaction.$(OBJEXT) \
-	MemBuf.$(OBJEXT) Notes.$(OBJEXT) StatCounters.$(OBJEXT) \
-	tests/stub_StatHist.$(OBJEXT) StrList.$(OBJEXT) \
-	String.$(OBJEXT) tests/stub_access_log.$(OBJEXT) \
-	tests/stub_cache_cf.$(OBJEXT) \
+	tests/stub_HttpRequest.$(OBJEXT) tests/stub_Instance.$(OBJEXT) \
+	MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) Notes.$(OBJEXT) \
+	StatCounters.$(OBJEXT) tests/stub_StatHist.$(OBJEXT) \
+	StrList.$(OBJEXT) String.$(OBJEXT) \
+	tests/stub_access_log.$(OBJEXT) tests/stub_cache_cf.$(OBJEXT) \
 	tests/stub_cache_manager.$(OBJEXT) cbdata.$(OBJEXT) \
 	tests/stub_client_side.$(OBJEXT) tests/stub_comm.$(OBJEXT) \
 	tests/stub_debug.$(OBJEXT) tests/stub_errorpage.$(OBJEXT) \
@@ -1081,8 +1081,8 @@ am__tests_testHttpRequest_SOURCES_DIST = BandwidthBucket.cc \
 	HttpHeaderFieldStat.h HttpHeaderTools.cc HttpHeaderTools.h \
 	HttpReply.cc HttpRequest.cc tests/testHttpRequest.cc \
 	tests/testHttpRequestMethod.cc \
-	tests/stub_HttpUpgradeProtocolAccess.cc IoStats.h \
-	tests/stub_IpcIoFile.cc LogTags.cc MasterXaction.cc \
+	tests/stub_HttpUpgradeProtocolAccess.cc tests/stub_Instance.cc \
+	IoStats.h tests/stub_IpcIoFile.cc LogTags.cc MasterXaction.cc \
 	MasterXaction.h MemBuf.cc MemObject.cc MemStore.cc Notes.cc \
 	Notes.h Parsing.cc PeerPoolMgr.cc PeerPoolMgr.h Pipeline.cc \
 	Pipeline.h RefreshPattern.h RemovalPolicy.cc RequestFlags.cc \
@@ -1134,10 +1134,10 @@ am_tests_testHttpRequest_OBJECTS = $(am__objects_3) $(am__objects_4) \
 	HttpRequest.$(OBJEXT) tests/testHttpRequest.$(OBJEXT) \
 	tests/testHttpRequestMethod.$(OBJEXT) \
 	tests/stub_HttpUpgradeProtocolAccess.$(OBJEXT) \
-	tests/stub_IpcIoFile.$(OBJEXT) LogTags.$(OBJEXT) \
-	MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
-	MemStore.$(OBJEXT) Notes.$(OBJEXT) Parsing.$(OBJEXT) \
-	PeerPoolMgr.$(OBJEXT) Pipeline.$(OBJEXT) \
+	tests/stub_Instance.$(OBJEXT) tests/stub_IpcIoFile.$(OBJEXT) \
+	LogTags.$(OBJEXT) MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) \
+	MemObject.$(OBJEXT) MemStore.$(OBJEXT) Notes.$(OBJEXT) \
+	Parsing.$(OBJEXT) PeerPoolMgr.$(OBJEXT) Pipeline.$(OBJEXT) \
 	RemovalPolicy.$(OBJEXT) RequestFlags.$(OBJEXT) \
 	ResolvedPeers.$(OBJEXT) SquidMath.$(OBJEXT) \
 	StatCounters.$(OBJEXT) StatHist.$(OBJEXT) \
@@ -1323,23 +1323,24 @@ am__tests_testRock_SOURCES_DIST = BandwidthBucket.cc BandwidthBucket.h \
 	HttpHdrCc.cc HttpHdrContRange.cc HttpHdrRange.cc HttpHdrSc.cc \
 	HttpHdrScTarget.cc HttpHeader.cc HttpHeader.h \
 	HttpHeaderFieldStat.h HttpHeaderTools.cc HttpHeaderTools.h \
-	HttpReply.cc tests/stub_HttpRequest.cc LogTags.cc \
-	MasterXaction.cc MasterXaction.h MemBuf.cc MemObject.cc \
-	MemStore.cc Notes.cc Notes.h Parsing.cc tests/stub_Port.cc \
-	RemovalPolicy.cc RequestFlags.cc RequestFlags.h \
-	ResolvedPeers.cc ResolvedPeers.h tests/testRock.cc \
-	StatCounters.cc StatCounters.h tests/stub_StatHist.cc \
-	StatHist.h StoreFileSystem.cc StoreIOState.cc \
-	tests/testStoreSupport.cc tests/testStoreSupport.h \
-	StoreSwapLogData.cc StrList.cc StrList.h String.cc \
-	Transients.cc Transients.h tests/stub_access_log.cc \
-	tests/stub_cache_cf.cc cache_cf.h tests/stub_cache_manager.cc \
-	cbdata.cc tests/stub_client_db.cc tests/stub_client_side.cc \
-	tests/stub_client_side_request.cc tests/stub_debug.cc \
-	tests/stub_errorpage.cc event.cc fatal.cc fatal.h fd.cc fd.h \
-	fde.cc fde.h filemap.cc tests/stub_fqdncache.cc fs_io.cc \
-	fs_io.h tests/stub_http.cc tests/stub_icp.cc int.cc int.h \
-	tests/stub_ipc.cc tests/stub_ipcache.cc tests/stub_libanyp.cc \
+	HttpReply.cc tests/stub_HttpRequest.cc tests/stub_Instance.cc \
+	LogTags.cc MasterXaction.cc MasterXaction.h MemBuf.cc \
+	MemObject.cc MemStore.cc Notes.cc Notes.h Parsing.cc \
+	tests/stub_Port.cc RemovalPolicy.cc RequestFlags.cc \
+	RequestFlags.h ResolvedPeers.cc ResolvedPeers.h \
+	tests/testRock.cc StatCounters.cc StatCounters.h \
+	tests/stub_StatHist.cc StatHist.h StoreFileSystem.cc \
+	StoreIOState.cc tests/testStoreSupport.cc \
+	tests/testStoreSupport.h StoreSwapLogData.cc StrList.cc \
+	StrList.h String.cc Transients.cc Transients.h \
+	tests/stub_access_log.cc tests/stub_cache_cf.cc cache_cf.h \
+	tests/stub_cache_manager.cc cbdata.cc tests/stub_client_db.cc \
+	tests/stub_client_side.cc tests/stub_client_side_request.cc \
+	tests/stub_debug.cc tests/stub_errorpage.cc event.cc fatal.cc \
+	fatal.h fd.cc fd.h fde.cc fde.h filemap.cc \
+	tests/stub_fqdncache.cc fs_io.cc fs_io.h tests/stub_http.cc \
+	tests/stub_icp.cc int.cc int.h tests/stub_ipc.cc \
+	tests/stub_ipcache.cc tests/stub_libanyp.cc \
 	tests/stub_libauth.cc tests/stub_liberror.cc \
 	tests/stub_libeui.cc tests/stub_libformat.cc \
 	tests/stub_libicmp.cc tests/stub_libip.cc tests/stub_liblog.cc \
@@ -1371,6 +1372,7 @@ am__tests_testRock_SOURCES_DIST = BandwidthBucket.cc BandwidthBucket.h \
 @ENABLE_FS_ROCK_TRUE@	HttpHeaderTools.$(OBJEXT) \
 @ENABLE_FS_ROCK_TRUE@	HttpReply.$(OBJEXT) \
 @ENABLE_FS_ROCK_TRUE@	tests/stub_HttpRequest.$(OBJEXT) \
+@ENABLE_FS_ROCK_TRUE@	tests/stub_Instance.$(OBJEXT) \
 @ENABLE_FS_ROCK_TRUE@	LogTags.$(OBJEXT) MasterXaction.$(OBJEXT) \
 @ENABLE_FS_ROCK_TRUE@	MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
 @ENABLE_FS_ROCK_TRUE@	MemStore.$(OBJEXT) Notes.$(OBJEXT) \
@@ -1524,11 +1526,12 @@ am__tests_testStore_SOURCES_DIST = BandwidthBucket.cc \
 	HttpHdrSc.cc HttpHdrScTarget.cc HttpHeader.cc HttpHeader.h \
 	HttpHeaderFieldStat.h HttpHeaderTools.cc HttpHeaderTools.h \
 	tests/stub_HttpReply.cc tests/stub_HttpRequest.cc \
-	MasterXaction.cc MasterXaction.h MemBuf.cc MemObject.cc \
-	MemStore.cc Notes.cc Notes.h tests/testPackableStream.cc \
-	Parsing.cc tests/stub_Port.cc RemovalPolicy.cc RequestFlags.cc \
-	RequestFlags.h StatCounters.cc StatCounters.h StatHist.cc \
-	StatHist.h tests/testStore.cc tests/testStore.h \
+	tests/stub_Instance.cc MasterXaction.cc MasterXaction.h \
+	MemBuf.cc MemObject.cc MemStore.cc Notes.cc Notes.h \
+	tests/testPackableStream.cc Parsing.cc tests/stub_Port.cc \
+	RemovalPolicy.cc RequestFlags.cc RequestFlags.h \
+	StatCounters.cc StatCounters.h StatHist.cc StatHist.h \
+	tests/testStore.cc tests/testStore.h \
 	tests/testStoreController.cc StoreFileSystem.cc \
 	tests/testStoreHashIndex.cc StoreIOState.cc \
 	tests/testStoreSupport.cc tests/testStoreSupport.h \
@@ -1565,18 +1568,19 @@ am_tests_testStore_OBJECTS = $(am__objects_3) \
 	HttpHdrSc.$(OBJEXT) HttpHdrScTarget.$(OBJEXT) \
 	HttpHeader.$(OBJEXT) HttpHeaderTools.$(OBJEXT) \
 	tests/stub_HttpReply.$(OBJEXT) \
-	tests/stub_HttpRequest.$(OBJEXT) MasterXaction.$(OBJEXT) \
-	MemBuf.$(OBJEXT) MemObject.$(OBJEXT) MemStore.$(OBJEXT) \
-	Notes.$(OBJEXT) tests/testPackableStream.$(OBJEXT) \
-	Parsing.$(OBJEXT) tests/stub_Port.$(OBJEXT) \
-	RemovalPolicy.$(OBJEXT) RequestFlags.$(OBJEXT) \
-	StatCounters.$(OBJEXT) StatHist.$(OBJEXT) \
-	tests/testStore.$(OBJEXT) tests/testStoreController.$(OBJEXT) \
-	StoreFileSystem.$(OBJEXT) tests/testStoreHashIndex.$(OBJEXT) \
-	StoreIOState.$(OBJEXT) tests/testStoreSupport.$(OBJEXT) \
-	StoreSwapLogData.$(OBJEXT) StrList.$(OBJEXT) String.$(OBJEXT) \
-	Transients.$(OBJEXT) tests/stub_UdsOp.$(OBJEXT) \
-	tests/stub_access_log.$(OBJEXT) tests/stub_cache_cf.$(OBJEXT) \
+	tests/stub_HttpRequest.$(OBJEXT) tests/stub_Instance.$(OBJEXT) \
+	MasterXaction.$(OBJEXT) MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
+	MemStore.$(OBJEXT) Notes.$(OBJEXT) \
+	tests/testPackableStream.$(OBJEXT) Parsing.$(OBJEXT) \
+	tests/stub_Port.$(OBJEXT) RemovalPolicy.$(OBJEXT) \
+	RequestFlags.$(OBJEXT) StatCounters.$(OBJEXT) \
+	StatHist.$(OBJEXT) tests/testStore.$(OBJEXT) \
+	tests/testStoreController.$(OBJEXT) StoreFileSystem.$(OBJEXT) \
+	tests/testStoreHashIndex.$(OBJEXT) StoreIOState.$(OBJEXT) \
+	tests/testStoreSupport.$(OBJEXT) StoreSwapLogData.$(OBJEXT) \
+	StrList.$(OBJEXT) String.$(OBJEXT) Transients.$(OBJEXT) \
+	tests/stub_UdsOp.$(OBJEXT) tests/stub_access_log.$(OBJEXT) \
+	tests/stub_cache_cf.$(OBJEXT) \
 	tests/stub_cache_manager.$(OBJEXT) cbdata.$(OBJEXT) \
 	tests/stub_client_side.$(OBJEXT) \
 	tests/stub_client_side_request.$(OBJEXT) \
@@ -1680,11 +1684,11 @@ am__tests_testUfs_SOURCES_DIST = BandwidthBucket.cc BandwidthBucket.h \
 	HttpHdrRange.cc HttpHdrSc.cc HttpHdrScTarget.cc HttpHeader.cc \
 	HttpHeader.h HttpHeaderFieldStat.h HttpHeaderTools.cc \
 	HttpHeaderTools.h HttpReply.cc tests/stub_HttpRequest.cc \
-	LogTags.cc MasterXaction.cc MasterXaction.h MemBuf.cc \
-	MemObject.cc MemStore.cc Notes.cc Notes.h Parsing.cc \
-	tests/stub_Port.cc RemovalPolicy.cc RequestFlags.cc \
-	RequestFlags.h StatCounters.cc StatCounters.h StatHist.cc \
-	StatHist.h StoreFileSystem.cc StoreIOState.cc \
+	tests/stub_Instance.cc LogTags.cc MasterXaction.cc \
+	MasterXaction.h MemBuf.cc MemObject.cc MemStore.cc Notes.cc \
+	Notes.h Parsing.cc tests/stub_Port.cc RemovalPolicy.cc \
+	RequestFlags.cc RequestFlags.h StatCounters.cc StatCounters.h \
+	StatHist.cc StatHist.h StoreFileSystem.cc StoreIOState.cc \
 	tests/testStoreSupport.cc tests/testStoreSupport.h \
 	StoreSwapLogData.cc StrList.cc StrList.h String.cc \
 	Transients.cc tests/stub_UdsOp.cc tests/testUfs.cc \
@@ -1728,6 +1732,7 @@ am__tests_testUfs_SOURCES_DIST = BandwidthBucket.cc BandwidthBucket.h \
 @ENABLE_FS_UFS_TRUE@	HttpHeaderTools.$(OBJEXT) \
 @ENABLE_FS_UFS_TRUE@	HttpReply.$(OBJEXT) \
 @ENABLE_FS_UFS_TRUE@	tests/stub_HttpRequest.$(OBJEXT) \
+@ENABLE_FS_UFS_TRUE@	tests/stub_Instance.$(OBJEXT) \
 @ENABLE_FS_UFS_TRUE@	LogTags.$(OBJEXT) MasterXaction.$(OBJEXT) \
 @ENABLE_FS_UFS_TRUE@	MemBuf.$(OBJEXT) MemObject.$(OBJEXT) \
 @ENABLE_FS_UFS_TRUE@	MemStore.$(OBJEXT) Notes.$(OBJEXT) \
@@ -1939,6 +1944,7 @@ am__depfiles_remade = ./$(DEPDIR)/AccessLogEntry.Po \
 	tests/$(DEPDIR)/stub_HttpReply.Po \
 	tests/$(DEPDIR)/stub_HttpRequest.Po \
 	tests/$(DEPDIR)/stub_HttpUpgradeProtocolAccess.Po \
+	tests/$(DEPDIR)/stub_Instance.Po \
 	tests/$(DEPDIR)/stub_IpcIoFile.Po \
 	tests/$(DEPDIR)/stub_MemBuf.Po \
 	tests/$(DEPDIR)/stub_MemObject.Po \
@@ -2950,6 +2956,7 @@ STUB_SOURCE = \
 	tests/stub_HttpReply.cc \
 	tests/stub_HttpRequest.cc \
 	tests/stub_HttpUpgradeProtocolAccess.cc \
+	tests/stub_Instance.cc \
 	tests/stub_IpcIoFile.cc \
 	tests/stub_MemBuf.cc \
 	tests/stub_MemObject.cc \
@@ -3323,6 +3330,7 @@ tests_testString_LDFLAGS = $(LIBADD_DL)
 @ENABLE_FS_ROCK_TRUE@	HttpHeaderTools.h \
 @ENABLE_FS_ROCK_TRUE@	HttpReply.cc \
 @ENABLE_FS_ROCK_TRUE@	tests/stub_HttpRequest.cc \
+@ENABLE_FS_ROCK_TRUE@	tests/stub_Instance.cc \
 @ENABLE_FS_ROCK_TRUE@	LogTags.cc \
 @ENABLE_FS_ROCK_TRUE@	MasterXaction.cc \
 @ENABLE_FS_ROCK_TRUE@	MasterXaction.h \
@@ -3487,6 +3495,7 @@ tests_testString_LDFLAGS = $(LIBADD_DL)
 @ENABLE_FS_UFS_TRUE@	HttpHeaderTools.h \
 @ENABLE_FS_UFS_TRUE@	HttpReply.cc \
 @ENABLE_FS_UFS_TRUE@	tests/stub_HttpRequest.cc \
+@ENABLE_FS_UFS_TRUE@	tests/stub_Instance.cc \
 @ENABLE_FS_UFS_TRUE@	LogTags.cc \
 @ENABLE_FS_UFS_TRUE@	MasterXaction.cc \
 @ENABLE_FS_UFS_TRUE@	MasterXaction.h \
@@ -3652,6 +3661,7 @@ tests_testStore_SOURCES = \
 	HttpHeaderTools.h \
 	tests/stub_HttpReply.cc \
 	tests/stub_HttpRequest.cc \
+	tests/stub_Instance.cc \
 	MasterXaction.cc \
 	MasterXaction.h \
 	MemBuf.cc \
@@ -3814,6 +3824,7 @@ tests_testDiskIO_SOURCES = \
 	HttpHeaderTools.h \
 	HttpReply.cc \
 	tests/stub_HttpRequest.cc \
+	tests/stub_Instance.cc \
 	LogTags.cc \
 	MasterXaction.cc \
 	MasterXaction.h \
@@ -4069,6 +4080,7 @@ tests_testHttpRange_SOURCES = \
 	HttpReply.cc \
 	HttpRequest.cc \
 	tests/stub_HttpUpgradeProtocolAccess.cc \
+	tests/stub_Instance.cc \
 	IoStats.h \
 	tests/stub_IpcIoFile.cc \
 	LogTags.cc \
@@ -4331,6 +4343,7 @@ tests_testHttpReply_SOURCES = \
 	tests/testHttpReply.cc \
 	HttpReply.h \
 	tests/stub_HttpRequest.cc \
+	tests/stub_Instance.cc \
 	MasterXaction.cc \
 	MasterXaction.h \
 	MemBuf.cc \
@@ -4459,6 +4472,7 @@ tests_testHttpRequest_SOURCES = \
 	tests/testHttpRequest.cc \
 	tests/testHttpRequestMethod.cc \
 	tests/stub_HttpUpgradeProtocolAccess.cc \
+	tests/stub_Instance.cc \
 	IoStats.h \
 	tests/stub_IpcIoFile.cc \
 	LogTags.cc \
@@ -4754,6 +4768,7 @@ tests_testCacheManager_SOURCES = \
 	HttpReply.cc \
 	HttpRequest.cc \
 	tests/stub_HttpUpgradeProtocolAccess.cc \
+	tests/stub_Instance.cc \
 	IoStats.h \
 	tests/stub_IpcIoFile.cc \
 	LogTags.cc \
@@ -5345,6 +5360,8 @@ tests/stub_HttpControlMsg.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
 tests/stub_HttpUpgradeProtocolAccess.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
+tests/stub_Instance.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
 tests/stub_IpcIoFile.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
 tests/stub_carp.$(OBJEXT): tests/$(am__dirstamp) \
@@ -5838,6 +5855,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_HttpReply.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_HttpRequest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_HttpUpgradeProtocolAccess.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_Instance.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_IpcIoFile.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_MemBuf.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/stub_MemObject.Po@am__quote@ # am--include-marker
@@ -6856,6 +6874,7 @@ distclean: distclean-recursive
 	-rm -f tests/$(DEPDIR)/stub_HttpReply.Po
 	-rm -f tests/$(DEPDIR)/stub_HttpRequest.Po
 	-rm -f tests/$(DEPDIR)/stub_HttpUpgradeProtocolAccess.Po
+	-rm -f tests/$(DEPDIR)/stub_Instance.Po
 	-rm -f tests/$(DEPDIR)/stub_IpcIoFile.Po
 	-rm -f tests/$(DEPDIR)/stub_MemBuf.Po
 	-rm -f tests/$(DEPDIR)/stub_MemObject.Po
@@ -7175,6 +7194,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f tests/$(DEPDIR)/stub_HttpReply.Po
 	-rm -f tests/$(DEPDIR)/stub_HttpRequest.Po
 	-rm -f tests/$(DEPDIR)/stub_HttpUpgradeProtocolAccess.Po
+	-rm -f tests/$(DEPDIR)/stub_Instance.Po
 	-rm -f tests/$(DEPDIR)/stub_IpcIoFile.Po
 	-rm -f tests/$(DEPDIR)/stub_MemBuf.Po
 	-rm -f tests/$(DEPDIR)/stub_MemObject.Po

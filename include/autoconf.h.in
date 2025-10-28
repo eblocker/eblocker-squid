@@ -499,6 +499,10 @@
 /* "Define to 1 if the EVP_PKEY_get0_RSA() OpenSSL API function exists" */
 #undef HAVE_LIBCRYPTO_EVP_PKEY_GET0_RSA
 
+/* "Define to 1 if the EVP_PKEY_get_default_digest_name() OpenSSL API function
+   exists" */
+#undef HAVE_LIBCRYPTO_EVP_PKEY_GET_DEFAULT_DIGEST_NAME
+
 /* "Define to 1 if the EVP_PKEY_up_ref() OpenSSL API function exists" */
 #undef HAVE_LIBCRYPTO_EVP_PKEY_UP_REF
 

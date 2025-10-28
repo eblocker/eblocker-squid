@@ -3,10 +3,10 @@
 <HEAD>
  <META NAME="GENERATOR" CONTENT="LinuxDoc-Tools 0.9.83">
  <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
- <TITLE>Squid 7.1 release notes</TITLE>
+ <TITLE>Squid 7.2 release notes</TITLE>
 </HEAD>
 <BODY>
-<H1>Squid 7.1 release notes</H1>
+<H1>Squid 7.2 release notes</H1>
 
 <H2>Squid Developers</H2>
 <P>
@@ -263,6 +263,14 @@ status and status-range values. Merging where necessary.</P>
 <P>Removed the <EM>non_peers</EM> action. See the Cache Manager
 <A HREF="#mgr">section</A> for details.</P>
 
+
+<DT><B>client_ip_max_connections</B><DD>
+<P>Fixed off-by-one enforcement. Squid now allows at most <EM>N</EM>
+concurrent connections per client IP (not <EM>N</EM>+1), where <EM>N</EM>
+is the configured directive value. Deployments that relied on the extra
+connection should increase the configured limit by one to preserve
+previous behavior.</P>
+
 <DT><B>dns_packet_max</B><DD>
 <P>Honor positive <EM>dns_packet_max</EM> values when sending DNS A queries
 and PTR queries containing IPv4 addresses. Prior to this change, Squid did
@@ -281,6 +289,9 @@ receive a dash character ("-") in the position of what used to be a
 
 <DT><B>logformat</B><DD>
 <P>Removed <EM>%ui</EM> format code with Ident protocol support.</P>
+
+<DT><B>email_err_data</B><DD>
+<P>Since Squid-7.2, the default for this directive is <EM>off</EM>.</P>
 
 <DT><B>external_acl_type</B><DD>
 <P>Removed <EM>%IDENT</EM> format code with Ident protocol support.</P>
@@ -394,6 +405,16 @@ alternative offered by the Samba project.</P>
 <DT><B>--enable-auth-ntlm=</B><DD>
 <P>Removed <EM>SMB_LM</EM> helper, in favour of the <EM>ntlm_auth</EM>
 alternative offered by the Samba project.</P>
+
+<DT><B>--disable-arch-native</B><DD>
+<P>The <EM>-march=native</EM> compiler option is no longer used by
+default. It is possible to enable it by using the
+<EM>--enable-arch-native</EM> option.
+Using <EM>-march=native</EM> may cause problems when Squid is
+run on a system with a different exact CPU model than the one
+it is built on, or in some containerized environments.
+The symptom is crashes with "illegal instruction" errors.
+We do not recommend enabling this optimization in virtualized environments.</P>
 
 </DL>
 </P>

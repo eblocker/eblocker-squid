@@ -637,11 +637,11 @@ AnyP::Uri::parseHost(Parser::Tokenizer &tok) const
 
     // no brackets implies we are looking at IPv4address or reg-name
 
-    // XXX: This code does not detect/reject some bad host values (e.g. "!#$%&"
-    // and "1.2.3.4.5"). TODO: Add more checks here, after migrating the
+    // XXX: This code does not detect/reject some bad host values (e.g. `!#$%&`).
+    // TODO: Add more checks here, after migrating the
     // non-CONNECT uri-host parsing code to use us.
 
-    SBuf otherHost; // IPv4address-ish or reg-name-ish;
+    SBuf otherHost; // IPv4address-ish or reg-name-ish
     // ":" is not in TCHAR so we will stop before any port specification
     if (tok.prefix(otherHost, CharacterSet::TCHAR))
         return otherHost;

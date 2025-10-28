@@ -1,3 +1,27 @@
+squid (7.2-2) unstable; urgency=high
+
+  [ Luigi Gangitano <luigi@debian.org> ]
+  * debian/patches/0008-upstream-ab5cf0c36b538627c82b3989d6c87d1668c7e081.patch
+    - Added upstream patch fixing error on CONNECT to hosts starting with
+      digit
+
+ -- Luigi Gangitano <luigi@debian.org>  Thu, 23 Oct 2025 19:18:11 +0200
+
+squid (7.2-1) unstable; urgency=high
+
+  [ Amos Jeffries <amosjeffries@squid-cache.org> ]
+  * New Upstream Release 7.2 (Closes: #1080997)
+    Fixes: CVE-2025-62168. SQUID-2025:2 (Closes: #1118341)
+    Fixes: CVE-2025-59362 (Closes: #1117048)
+
+  * debian/watch
+    - remove check for files no longer provided upstream
+
+  * debian/control
+    - support libkrb5 provided by krb5-multidev package
+
+ -- Luigi Gangitano <luigi@debian.org>  Wed, 22 Oct	2025 16:58:20 +0200
+
 squid (7.1-1+eblocker1) unstable; urgency=medium
 
   * Reduce lifetime of certificate to 46 days if origin server certificate is unkown.

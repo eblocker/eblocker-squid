@@ -93,10 +93,7 @@ TESTS = testHeaders tests/testRFC1738$(EXEEXT)
 @ENABLE_LOADABLE_MODULES_TRUE@am__append_1 = $(INCLTDL)
 @ENABLE_SNMP_TRUE@am__append_2 = snmplib
 @ENABLE_SSPI_TRUE@am__append_3 = sspi
-
-# smblib is the only user of the rfcnb library
-@ENABLE_SMBLIB_TRUE@am__append_4 = rfcnb smblib
-@ENABLE_AUTH_NTLM_TRUE@am__append_5 = ntlmauth
+@ENABLE_AUTH_NTLM_TRUE@am__append_4 = ntlmauth
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/acinclude/ax_with_prog.m4 \
@@ -501,7 +498,7 @@ TEST_LOGS = $(am__test_logs2:.test.log=.log)
 TEST_LOG_DRIVER = $(SHELL) $(top_srcdir)/cfgaux/test-driver
 TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
 	$(TEST_LOG_FLAGS)
-DIST_SUBDIRS = snmplib sspi rfcnb smblib ntlmauth
+DIST_SUBDIRS = snmplib sspi ntlmauth
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/cfgaux/depcomp \
 	$(top_srcdir)/cfgaux/test-driver $(top_srcdir)/src/Common.am \
 	$(top_srcdir)/src/TestHeaders.am
@@ -808,8 +805,7 @@ subst_perlshell = sed -e 's,[@]PERL[@],$(PERL),g' <$(srcdir)/$@.pl.in >$@ || ($(
 # A space-separated list of header files to be skipped by
 # testHeaders during "make check"
 EXCLUDE_FROM_HDR_TESTING = 
-SUBDIRS = $(am__append_2) $(am__append_3) $(am__append_4) \
-	$(am__append_5)
+SUBDIRS = $(am__append_2) $(am__append_3) $(am__append_4)
 EXTRA_DIST = 
 noinst_LTLIBRARIES = \
 	libmiscencoding.la \
